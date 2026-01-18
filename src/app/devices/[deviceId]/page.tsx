@@ -1,90 +1,79 @@
-'use client';
+import { createClient } from '@/utils/supabase/server';
+import { redirect } from 'next/navigation';
+import DeviceDetailView from '@/components/DeviceDetailView';
 
-import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import DeviceTabs from '@/components/DeviceTabs';
-import MonitoringPanel from '@/components/MonitoringPanel';
-import ControlPanel from '@/components/ControlPanel';
+export default async function DeviceDetailPage({ params }: { params: Promise<{ deviceId: string }> }) {
+    const { deviceId } = await params;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
-export default function DeviceDetailPage() {
-    const router = useRouter();
-    const params = useParams(); // params.deviceId
+    if (!user) {
+        redirect('/login');
+    }
 
-    // State
-    const [activeTab, setActiveTab] = useState<'monitoring' | 'control'>('monitoring');
+    // 1. Fetch Device & Verify Owner
+    const { data: device, error: deviceError } = await supabase
+        .from('devices')
+        .select('*')
+        .eq('id', deviceId)
+        .eq('owner_id', user.id)
+        .single();
 
-    // Dummy Sensor Data
-    const [temperature, setTemperature] = useState(28);
-    const [ph, setPh] = useState(4.5);
-    const [fermentationStatus, setFermentationStatus] = useState<'IDLE' | 'RUNNING' | 'DONE'>('IDLE');
+    if (deviceError || !device) {
+        redirect('/devices');
+    }
 
-    // Control State
-    const [toggles, setToggles] = useState({
-        tempEnabled: false,
-        phEnabled: false,
-        drainEnabled: false,
-    });
-    const [targetPh, setTargetPh] = useState(4.5);
+    // 2. Fetch Settings (create default if missing)
+    let { data: settings } = await supabase
+        .from('device_settings')
+        .select('*')
+        .eq('device_id', deviceId)
+        .single();
 
-    const handleStartFermentation = () => {
-        // Dummy logic: just switch state to RUNNING
-        setFermentationStatus('RUNNING');
+    if (!settings) {
+        // Auto-create default settings
+        const { data: newSettings, error: createError } = await supabase
+            .from('device_settings')
+            .insert({
+                device_id: deviceId,
+                target_ph: 4.50,
+                auto_drain_enabled: true
+            })
+            .select()
+            .single();
 
-        // Simulate completion after 5 seconds for demo
-        setTimeout(() => {
-            setFermentationStatus('DONE');
-        }, 5000);
-    };
+        if (!createError) {
+            settings = newSettings;
+        } else {
+            // Fallback if insertion fails for some reason (race condition etc)
+            settings = { target_ph: 4.50, auto_drain_enabled: true };
+        }
+    }
 
-    const handleToggle = (key: keyof typeof toggles) => {
-        setToggles(prev => ({
-            ...prev,
-            [key]: !prev[key]
-        }));
-    };
+    // 3. Fetch Status (latest run)
+    const { data: runs } = await supabase
+        .from('fermentation_runs')
+        .select('status')
+        .eq('device_id', deviceId)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-    const handleTurnOffAll = () => {
-        setToggles({
-            tempEnabled: false,
-            phEnabled: false,
-            drainEnabled: false,
-        });
-    };
+    const status = runs?.[0]?.status || 'idle';
+
+    // 4. Fetch Telemetry
+    const { data: telemetry } = await supabase
+        .from('telemetry')
+        .select('ph, temp_c')
+        .eq('device_id', deviceId)
+        .order('created_at', { ascending: false })
+        .limit(1);
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6 font-sans">
-            <div className="max-w-md mx-auto space-y-6">
-                {/* Header & Back */}
-                <div className="flex items-center gap-4">
-                    <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600"><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
-                    </button>
-                    <h1 className="text-2xl font-bold text-gray-900">SmartMocaf</h1>
-                </div>
-
-                {/* Tabs */}
-                <DeviceTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-                {/* Content */}
-                <div className="mt-6">
-                    {activeTab === 'monitoring' ? (
-                        <MonitoringPanel
-                            temperature={temperature}
-                            ph={ph}
-                            fermentationStatus={fermentationStatus}
-                            onStartFermentation={handleStartFermentation}
-                        />
-                    ) : (
-                        <ControlPanel
-                            toggles={toggles}
-                            targetPh={targetPh}
-                            onToggle={handleToggle}
-                            onTargetPhChange={setTargetPh}
-                            onTurnOffAll={handleTurnOffAll}
-                        />
-                    )}
-                </div>
-            </div>
-        </div>
+        <DeviceDetailView
+            device={device}
+            settings={settings}
+            status={status}
+            telemetry={telemetry?.[0] || null}
+        />
     );
 }

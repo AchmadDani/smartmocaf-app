@@ -1,36 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
+import { updateDeviceSettings } from '@/app/actions/device';
 
 interface ControlPanelProps {
-    toggles: {
-        tempEnabled: boolean;
-        phEnabled: boolean;
-        drainEnabled: boolean;
+    deviceId: string;
+    settings: {
+        target_ph: number;
+        auto_drain_enabled: boolean;
     };
-    targetPh: number;
-    onToggle: (key: 'tempEnabled' | 'phEnabled' | 'drainEnabled') => void;
-    onTargetPhChange: (val: number) => void;
-    onTurnOffAll: () => void;
 }
 
 export default function ControlPanel({
-    toggles,
-    targetPh,
-    onToggle,
-    onTargetPhChange,
-    onTurnOffAll,
+    deviceId,
+    settings,
 }: ControlPanelProps) {
+    const [isPending, startTransition] = useTransition();
     const [isEditingPh, setIsEditingPh] = useState(false);
-    const [tempPhInput, setTempPhInput] = useState(targetPh.toString());
+    const [tempPhInput, setTempPhInput] = useState(settings?.target_ph?.toString() || "4.50");
+
+    const handleToggleDrain = () => {
+        startTransition(async () => {
+            await updateDeviceSettings(deviceId, {
+                auto_drain_enabled: !settings.auto_drain_enabled
+            });
+        });
+    };
 
     const handlePhSubmit = () => {
         const val = parseFloat(tempPhInput);
         if (!isNaN(val)) {
-            onTargetPhChange(val);
+            startTransition(async () => {
+                await updateDeviceSettings(deviceId, {
+                    target_ph: val
+                });
+            });
         }
         setIsEditingPh(false);
     };
+
+    // Placeholder toggles for demo (only drain is real in DB as per request "Hubungkan 1 toggle real")
+    // But let's act as if they are local state for visual feedback if strictly requested not to bind?
+    // User request: "Hubungkan 1 toggle real ke: device_settings.auto_drain_enabled. Toggle lain boleh placeholder"
+    const [dummyToggles, setDummyToggles] = useState({ temp: false, ph: false });
 
     return (
         <div className="space-y-6">
@@ -41,20 +53,23 @@ export default function ControlPanel({
                     <HardwareToggle
                         label="Suhu"
                         icon="thermometer"
-                        checked={toggles.tempEnabled}
-                        onChange={() => onToggle('tempEnabled')}
+                        checked={dummyToggles.temp}
+                        onChange={() => setDummyToggles(p => ({ ...p, temp: !p.temp }))}
+                        disabled={isPending}
                     />
                     <HardwareToggle
                         label="PH"
                         icon="droplet-ph"
-                        checked={toggles.phEnabled}
-                        onChange={() => onToggle('phEnabled')}
+                        checked={dummyToggles.ph}
+                        onChange={() => setDummyToggles(p => ({ ...p, ph: !p.ph }))}
+                        disabled={isPending}
                     />
                     <HardwareToggle
-                        label="Kuras Air"
+                        label="Kuras Air (Auto Drain)"
                         icon="pipe"
-                        checked={toggles.drainEnabled}
-                        onChange={() => onToggle('drainEnabled')}
+                        checked={settings.auto_drain_enabled}
+                        onChange={handleToggleDrain}
+                        disabled={isPending}
                     />
                 </div>
             </div>
@@ -84,7 +99,7 @@ export default function ControlPanel({
                             />
                         ) : (
                             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setIsEditingPh(true)}>
-                                <span className="text-xl font-bold text-gray-900">{targetPh}</span>
+                                <span className="text-xl font-bold text-gray-900">{settings.target_ph}</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
                             </div>
                         )}
@@ -93,10 +108,10 @@ export default function ControlPanel({
             </div>
 
             <button
-                onClick={onTurnOffAll}
-                className="w-full bg-[#bd7e7e] text-white font-medium py-3 rounded-xl mt-8 hover:bg-[#a66b6b] transition-colors"
+                className="w-full bg-[#bd7e7e] text-white font-medium py-3 rounded-xl mt-8 hover:bg-[#a66b6b] transition-colors opacity-50 cursor-not-allowed"
+                disabled
             >
-                Matikan Semua Sensor
+                Matikan Semua Sensor (Coming Soon)
             </button>
         </div>
     );
@@ -107,11 +122,13 @@ function HardwareToggle({
     icon,
     checked,
     onChange,
+    disabled
 }: {
     label: string;
     icon: string;
     checked: boolean;
     onChange: () => void;
+    disabled?: boolean;
 }) {
     return (
         <div className="flex items-center justify-between">
@@ -124,7 +141,7 @@ function HardwareToggle({
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.74 5.74a8 8 0 1 1-11.48 0L12 2.69z" /><path d="M16 13a3 3 0 0 1-5.66 0" /><path d="M12 16a2 2 0 0 1 2-2" /></svg>
                     )}
                     {icon === 'pipe' && (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10h5a3 3 0 0 0 2 8l2-9" /><path d="M3 10v6" /><path d="M7 16h8" /><path d="M21 16h-6" /></svg> // Approximation
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10h5a3 3 0 0 0 2 8l2-9" /><path d="M3 10v6" /><path d="M7 16h8" /><path d="M21 16h-6" /></svg>
                     )}
                 </div>
                 <span className="text-gray-700 font-medium">{label}</span>
@@ -134,6 +151,7 @@ function HardwareToggle({
                     type="checkbox"
                     checked={checked}
                     onChange={onChange}
+                    disabled={disabled}
                     className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#bd7e7e] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#bd7e7e]"></div>
