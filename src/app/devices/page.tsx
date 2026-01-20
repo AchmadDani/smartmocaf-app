@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
-import { createDevice } from '../actions/device';
 import { redirect } from 'next/navigation';
+import AddDeviceButton from '@/components/AddDeviceDialog';
+import LogoutButton from '@/components/LogoutConfirmationDialog';
 
 export default async function DevicesPage() {
     const supabase = await createClient();
@@ -59,70 +60,61 @@ export default async function DevicesPage() {
         };
     }));
 
-    // Server Action Wrapper for inline form (testing)
-    async function handleAddDevice(formData: FormData) {
-        'use server';
-        const name = formData.get('name') as string;
-        const code = `DEV-${Date.now().toString().slice(-4)}`; // Random code
-        await createDevice(name, code);
-    }
-
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-md mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-bold text-gray-900">SmartMocaf</h1>
-                    <form action={async () => {
-                        'use server';
-                        const supabase = await createClient();
-                        await supabase.auth.signOut();
-                        redirect('/login');
-                    }}>
-                        <button
-                            type="submit"
-                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                            title="Keluar"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
-                        </button>
-                    </form>
-                </div>
-
-                <div className="space-y-4">
-                    {devicesWithData.length === 0 ? (
-                        <div className="text-center py-10 bg-white rounded-xl shadow-sm">
-                            <p className="text-gray-500">Belum ada perangkat</p>
+        <div className="min-h-screen bg-[#F5F5F5] font-sans">
+            <div className="max-w-md mx-auto min-h-screen flex flex-col relative bg-[#F5F5F5]">
+                {/* Header */}
+                <header className="flex justify-between items-center p-6 pb-2">
+                    <div className="flex items-center gap-2">
+                        {/* Current Logo Placeholder (Cassava/Leaf shape) */}
+                        <div className="text-[#8B5E3C]">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM6 13C6.55 13 7 13.45 7 14C7 14.55 6.55 15 6 15C5.45 15 5 14.55 5 14C5 13.45 5.45 13 6 13ZM18 13C18.55 13 19 13.45 19 14C19 14.55 18.55 15 18 15C17.45 15 17 14.55 17 14C17 13.45 17.45 13 18 13ZM12 5C14.05 5 15.93 5.76 17.41 7.03C17.75 7.32 17.78 7.82 17.49 8.16C17.2 8.5 16.7 8.53 16.36 8.24C15.17 7.21 13.65 6.6 12 6.6C10.35 6.6 8.83 7.21 7.64 8.24C7.3 8.53 6.8 8.5 6.51 8.16C6.22 7.82 6.25 7.32 6.59 7.03C8.07 5.76 9.95 5 12 5Z" />
+                            </svg>
                         </div>
-                    ) : (
-                        devicesWithData.map((device) => (
-                            <DeviceCard
-                                key={device.id}
-                                id={device.id}
-                                name={device.name}
-                                statusDisplay={device.statusDisplay}
-                                statusColor={device.statusColor}
-                                temp={device.temp}
-                                ph={device.ph}
-                            />
-                        ))
-                    )}
-
-                    {/* Developer Tools: Simple Add Device */}
-                    <div className="mt-8 pt-8 border-t border-gray-200">
-                        <h3 className="text-sm font-medium text-gray-500 mb-3">Developer Tools</h3>
-                        <form action={handleAddDevice} className="flex gap-2">
-                            <input
-                                name="name"
-                                placeholder="Nama Device Baru"
-                                className="flex-1 px-3 py-2 border rounded-lg text-sm text-black"
-                                required
-                            />
-                            <button className="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm hover:bg-black">
-                                + Add
-                            </button>
-                        </form>
+                        <span className="text-xl font-normal text-black tracking-wide">SmartMocaf</span>
                     </div>
-                </div>
+
+                    {/* Logout Button */}
+                    <LogoutButton />
+                </header>
+
+                {/* Page Content */}
+                <main className="flex-1 px-6 pt-4 flex flex-col">
+                    {/* Section Title */}
+                    <div className="flex items-center gap-3 mb-10">
+                        <div className="w-1.5 h-8 bg-black"></div>
+                        <h2 className="text-xl font-normal text-black">Daftar Alat</h2>
+                    </div>
+
+                    {/* Device List or Empty State */}
+                    <div className="flex-1 flex flex-col">
+                        {devicesWithData.length === 0 ? (
+                            <div className="flex-1 flex items-center justify-center">
+                                <p className="text-lg text-black font-normal">Tidak ada alat terhubung</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {devicesWithData.map((device) => (
+                                    <DeviceCard
+                                        key={device.id}
+                                        id={device.id}
+                                        name={device.name}
+                                        statusDisplay={device.statusDisplay}
+                                        statusColor={device.statusColor}
+                                        temp={device.temp}
+                                        ph={device.ph}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Add Button */}
+                    <div className="pb-10 pt-6">
+                        <AddDeviceButton />
+                    </div>
+                </main>
             </div>
         </div>
     );

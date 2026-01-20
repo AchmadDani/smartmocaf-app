@@ -4,28 +4,42 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DeviceTabs from '@/components/DeviceTabs';
 import MonitoringPanel from '@/components/MonitoringPanel';
-import ControlPanel from '@/components/ControlPanel';
+
+import HistoryCard from '@/components/HistoryCard';
+
+import DeleteDeviceButton from './DeleteDeviceButton';
 
 interface DeviceDetailViewProps {
     device: any;
     settings: any;
     telemetry: any;
     status: 'idle' | 'running' | 'done';
+    history: any[];
 }
 
-export default function DeviceDetailView({ device, settings, telemetry, status }: DeviceDetailViewProps) {
+export default function DeviceDetailView({ device, settings, telemetry, status, history }: DeviceDetailViewProps) {
+    const [activeTab, setActiveTab] = useState<'monitoring' | 'history'>('monitoring');
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'monitoring' | 'control'>('monitoring');
 
     return (
         <div className="min-h-screen bg-gray-50 p-6 font-sans">
             <div className="max-w-md mx-auto space-y-6">
-                {/* Header & Back */}
-                <div className="flex items-center gap-4">
-                    <button onClick={() => router.back()} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600"><path d="M19 12H5" /><path d="M12 19l-7-7 7-7" /></svg>
-                    </button>
-                    <h1 className="text-2xl font-bold text-gray-900">{device.name}</h1>
+                {/* Header */}
+                <div className="pt-2 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => router.push('/devices')}
+                            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
+                            aria-label="Back to devices"
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M15 18L9 12L15 6" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+                        <h1 className="text-3xl font-medium text-black">SmartMocaf</h1>
+                    </div>
+
+                    <DeleteDeviceButton deviceId={device.id} />
                 </div>
 
                 {/* Tabs */}
@@ -38,12 +52,20 @@ export default function DeviceDetailView({ device, settings, telemetry, status }
                             deviceId={device.id}
                             telemetry={telemetry}
                             status={status}
-                        />
-                    ) : (
-                        <ControlPanel
-                            deviceId={device.id}
                             settings={settings}
                         />
+                    ) : (
+                        <div className="space-y-4">
+                            {history && history.length > 0 ? (
+                                history.map((item) => (
+                                    <HistoryCard key={item.id} item={item} />
+                                ))
+                            ) : (
+                                <div className="bg-white p-6 rounded-xl shadow-sm text-center">
+                                    <p className="text-gray-500">Belum ada riwayat fermentasi.</p>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
