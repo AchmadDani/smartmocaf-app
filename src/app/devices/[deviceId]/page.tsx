@@ -37,7 +37,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
             .insert({
                 device_id: deviceId,
                 target_ph: 4.50,
-                auto_drain_enabled: true
+                auto_drain_enabled: false
             })
             .select()
             .single();
@@ -46,7 +46,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
             settings = newSettings;
         } else {
             // Fallback if insertion fails for some reason (race condition etc)
-            settings = { target_ph: 4.50, auto_drain_enabled: true };
+            settings = { target_ph: 4.50, auto_drain_enabled: false };
         }
     }
 
@@ -68,12 +68,56 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
         .order('created_at', { ascending: false })
         .limit(1);
 
+    // 5. Fetch History (Completed fermentation runs)
+    const { data: historyRuns } = await supabase
+        .from('fermentation_runs')
+        .select('*')
+        .eq('status', 'done')
+        .eq('device_id', deviceId)
+        .order('ended_at', { ascending: false })
+        .limit(10);
+
+    const history = await Promise.all((historyRuns || []).map(async (run) => {
+        // Fetch start telemetry
+        const { data: startTelem } = await supabase
+            .from('telemetry')
+            .select('ph, temp_c')
+            .eq('run_id', run.id)
+            .order('created_at', { ascending: true }) // First one
+            .limit(1)
+            .single();
+
+        // Fetch end telemetry
+        const { data: endTelem } = await supabase
+            .from('telemetry')
+            .select('ph, temp_c')
+            .eq('run_id', run.id)
+            .order('created_at', { ascending: false }) // Last one
+            .limit(1)
+            .single();
+
+        return {
+            id: run.id,
+            startedAt: run.started_at,
+            endedAt: run.ended_at,
+            before: {
+                ph: startTelem?.ph || 0,
+                temp: startTelem?.temp_c || 0,
+            },
+            after: {
+                ph: endTelem?.ph || 0,
+                temp: endTelem?.temp_c || 0,
+            }
+        };
+    }));
+
     return (
         <DeviceDetailView
             device={device}
             settings={settings}
             status={status}
             telemetry={telemetry?.[0] || null}
+            history={history}
         />
     );
 }

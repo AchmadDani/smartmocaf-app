@@ -139,3 +139,60 @@ export async function simulateTelemetry(deviceId: string) {
     revalidatePath(`/devices/${deviceId}`);
     revalidatePath('/devices');
 }
+
+
+
+export async function getRunTimeline(runId: string) {
+    const supabase = await createClient();
+    await getUserId(); // ensure auth
+
+    const { data, error } = await supabase
+        .from('telemetry')
+        .select('ph, temp_c, created_at')
+        .eq('run_id', runId)
+        .order('created_at', { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    if (!data || data.length === 0) return [];
+
+    const timeline = [];
+    let lastPh = null;
+
+    for (const point of data) {
+        if (lastPh === null || point.ph !== lastPh) {
+            timeline.push(point);
+            lastPh = point.ph;
+        }
+    }
+
+    return timeline;
+}
+
+export async function deleteDevice(deviceId: string) {
+    const supabase = await createClient();
+    const userId = await getUserId();
+
+    // Verify ownership
+    const { data: device } = await supabase
+        .from('devices')
+        .select('id')
+        .eq('id', deviceId)
+        .eq('owner_id', userId)
+        .single();
+
+    if (!device) {
+        throw new Error('Device not found or unauthorized');
+    }
+
+    // Delete device (Cascade should handle related tables like settings, telemetry, runs if configured, 
+    // otherwise we might need to delete them manually. Assuming cascade or simple delete for now)
+    const { error } = await supabase
+        .from('devices')
+        .delete()
+        .eq('id', deviceId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/devices');
+}
