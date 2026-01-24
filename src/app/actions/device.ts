@@ -32,6 +32,39 @@ export async function createDevice(name: string, deviceCode: string) {
     return data;
 }
 
+export async function createDeviceCommand(
+    deviceId: string,
+    command: string,
+    payload: any,
+    runId: number | null = null
+) {
+    const supabase = await createClient();
+    const userId = await getUserId();
+
+    // Verify ownership
+    const { data: device } = await supabase
+        .from('devices')
+        .select('id')
+        .eq('id', deviceId)
+        .eq('owner_id', userId)
+        .single();
+
+    if (!device) throw new Error('Unauthorized or device not found');
+
+    const { error } = await supabase
+        .from('device_commands')
+        .insert({
+            device_id: deviceId,
+            command,
+            payload,
+            status: 'queued',
+            requested_by: userId,
+            run_id: runId || null
+        });
+
+    if (error) throw new Error(error.message);
+}
+
 export async function updateDeviceSettings(deviceId: string, settings: { target_ph?: number; auto_drain_enabled?: boolean }) {
     const supabase = await createClient();
     await getUserId(); // ensure auth
@@ -45,6 +78,65 @@ export async function updateDeviceSettings(deviceId: string, settings: { target_
         });
 
     if (error) throw new Error(error.message);
+
+    // Create command SETTINGS_UPDATE
+    // We need to fetch the full settings to ensure we send the complete contract if needed,
+    // or just send what we have + defaults. 
+    // Contract says: target_ph, auto_drain_enabled, telemetry config.
+    // For now we'll send the updated fields merge with defaults or fetching current state?
+    // Let's fetch current state to be safe and accurate.
+    const { data: currentSettings } = await supabase
+        .from('device_settings')
+        .select('target_ph, auto_drain_enabled')
+        .eq('device_id', deviceId)
+        .single();
+
+    // Default telemetry config as per contract
+    const telemetryConfig = {
+        temp_interval_sec: 60,
+        ph_interval_sec: 10800
+    };
+
+    await createDeviceCommand(deviceId, 'SETTINGS_UPDATE', {
+        target_ph: currentSettings?.target_ph ?? 4.5,
+        auto_drain_enabled: currentSettings?.auto_drain_enabled ?? false,
+        telemetry: telemetryConfig
+    });
+
+    revalidatePath(`/devices/${deviceId}`);
+}
+
+export async function manualDrainToggle(deviceId: string, open: boolean) {
+    // Helper to check if running
+    const supabase = await createClient();
+
+    // Check if running
+    const { data: runningRun } = await supabase
+        .from('fermentation_runs')
+        .select('id')
+        .eq('device_id', deviceId)
+        .eq('status', 'running')
+        .single();
+
+    if (runningRun) {
+        throw new Error("Cannot toggle drain while fermentation is running");
+    }
+
+    // 1. Update source of truth (device_settings)
+    // The UI toggle state relies on this value.
+    const { error: updateError } = await supabase
+        .from('device_settings')
+        .update({
+            auto_drain_enabled: open,
+            updated_at: new Date().toISOString()
+        })
+        .eq('device_id', deviceId);
+
+    if (updateError) throw new Error("Failed to update settings: " + updateError.message);
+
+    // 2. Create Command
+    await createDeviceCommand(deviceId, open ? 'DRAIN_OPEN' : 'DRAIN_CLOSE', { source: 'manual' });
+
     revalidatePath(`/devices/${deviceId}`);
 }
 
@@ -59,21 +151,34 @@ export async function startFermentation(deviceId: string) {
         .eq('device_id', deviceId)
         .single();
 
-    // Check if there is already a running process? 
-    // For simplicity, we assume the UI handles disabling, but good to check or just insert.
-    // We'll just insert a new 'running' run.
+    const targetPh = settings?.target_ph || 4.5;
 
-    const { error } = await supabase
+    const { data: newRun, error } = await supabase
         .from('fermentation_runs')
         .insert({
             device_id: deviceId,
             status: 'running',
-            target_ph: settings?.target_ph || 4.5,
+            target_ph: targetPh,
             started_at: new Date().toISOString(),
             created_by: userId,
-        });
+        })
+        .select()
+        .single();
 
     if (error) throw new Error(error.message);
+
+    // Create RUN_START command
+    await createDeviceCommand(deviceId, 'RUN_START', {
+        target_ph: targetPh,
+        mode: 'auto',
+        telemetry: {
+            temp_interval_sec: 60,
+            ph_interval_sec: 10800,
+            ph_near_target_interval_sec: 300,
+            near_target_delta: 0.2
+        }
+    }, newRun.id); // Passing newRun.id
+
     revalidatePath(`/devices/${deviceId}`);
     revalidatePath('/devices'); // Status changes in list too
 }
@@ -102,6 +207,9 @@ export async function stopFermentation(deviceId: string) {
             .eq('id', latestRun.id);
 
         if (error) throw new Error(error.message);
+
+        // Create RUN_STOP command
+        await createDeviceCommand(deviceId, 'RUN_STOP', { reason: 'user_stop' }, latestRun.id);
     }
 
     revalidatePath(`/devices/${deviceId}`);

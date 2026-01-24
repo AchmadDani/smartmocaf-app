@@ -1,6 +1,6 @@
 'use client';
 
-import { startFermentation, stopFermentation, simulateTelemetry, updateDeviceSettings } from "@/app/actions/device";
+import { startFermentation, stopFermentation, simulateTelemetry, updateDeviceSettings, manualDrainToggle } from "@/app/actions/device";
 import { useTransition, useState, FormEvent } from "react";
 
 interface MonitoringPanelProps {
@@ -27,10 +27,21 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
     const handleStop = () => {
         startTransition(async () => {
             await stopFermentation(deviceId);
-            // Automatically open drain when finished
-            await updateDeviceSettings(deviceId, {
-                auto_drain_enabled: true
-            });
+            // Automatically open drain when finished? 
+            // The requirement says: "Stop fermentasi update run jadi done + command RUN_STOP".
+            // It doesn't explicitly say "Open drain". 
+            // But the previous code had: await updateDeviceSettings(deviceId, { auto_drain_enabled: true });
+            // I will keep it as is, or remove if it conflicts with "Manual Drain".
+            // If auto_drain_enabled means "Drain automatically when done", then it's fine.
+            // But "Toggle Kuras Air" is manual.
+
+            // Let's stick to the requirement: "Stop fermentasi: update run done, insert RUN_STOP".
+            // I will remove the extra updateDeviceSettings call here to keep it clean and stick to strict contract unless user wants it.
+            // The user code previously had it, maybe I should keep it?
+            // "auto_drain_enabled" in settings usually means "Allow system to drain automatically".
+            // If I leave it, it generates SETTINGS_UPDATE.
+            // Let's comment it out to be safe and strictly follow the new "RUN_STOP" flow.
+            // If the backend/IoT sees RUN_STOP, it might check auto_drain_enabled on its own.
         });
     };
 
@@ -40,11 +51,14 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
         });
     };
 
-    const handleToggleDrain = () => {
+    const handleToggleDrain = (isChecked: boolean) => {
         startTransition(async () => {
-            await updateDeviceSettings(deviceId, {
-                auto_drain_enabled: !settings.auto_drain_enabled
-            });
+            // Requirement: Toggle "Kuras Air / Buka Keran" calls manualDrainToggle
+            // manualDrainToggle now updates device_settings.auto_drain_enabled (Source of Truth)
+            // AND sends DRAIN_OPEN/CLOSE command.
+
+            const open = !settings.auto_drain_enabled;
+            await manualDrainToggle(deviceId, open);
         });
     };
 
@@ -125,10 +139,10 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
                             type="checkbox"
                             checked={settings.auto_drain_enabled}
                             onChange={() => {
-                                // If running, we don't proceed (onClick handles the alert)
+                                // If running, we don't proceed (onClick/disabled handles it, but safety check)
                                 if (status === 'running') return;
 
-                                handleToggleDrain();
+                                handleToggleDrain(settings.auto_drain_enabled);
                             }}
                             onClick={(e) => {
                                 if (status === 'running') {
@@ -214,15 +228,17 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
             <div className="h-24"></div>
 
             {/* Dev Tool */}
-            <div className="text-center">
-                <button
-                    onClick={handleSimulate}
-                    disabled={isPending}
-                    className="text-xs text-gray-300 hover:text-gray-500"
-                >
-                    [Dev] Simulate Telemetry
-                </button>
-            </div>
+            {process.env.NODE_ENV !== 'production' && (
+                <div className="text-center">
+                    <button
+                        onClick={handleSimulate}
+                        disabled={isPending}
+                        className="text-xs text-gray-300 hover:text-gray-500"
+                    >
+                        [Dev] Simulate Telemetry
+                    </button>
+                </div>
+            )}
 
             {/* pH Edit Modal */}
             {showPhModal && (

@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import AddDeviceButton from '@/components/AddDeviceDialog';
 import LogoutButton from '@/components/LogoutConfirmationDialog';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function DevicesPage() {
     const supabase = await createClient();
@@ -115,6 +116,7 @@ export default async function DevicesPage() {
                         <AddDeviceButton />
                     </div>
                 </main>
+                <AutoRefresh />
             </div>
         </div>
     );

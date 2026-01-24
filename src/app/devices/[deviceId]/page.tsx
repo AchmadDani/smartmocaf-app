@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import DeviceDetailView from '@/components/DeviceDetailView';
+import AutoRefresh from '@/components/AutoRefresh';
 
 export default async function DeviceDetailPage({ params }: { params: Promise<{ deviceId: string }> }) {
     const { deviceId } = await params;
@@ -112,12 +113,15 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
     }));
 
     return (
-        <DeviceDetailView
-            device={device}
-            settings={settings}
-            status={status}
-            telemetry={telemetry?.[0] || null}
-            history={history}
-        />
+        <>
+            <DeviceDetailView
+                device={device}
+                settings={settings}
+                status={status}
+                telemetry={telemetry?.[0] || null}
+                history={history}
+            />
+            <AutoRefresh />
+        </>
     );
 }
