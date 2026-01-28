@@ -15,22 +15,27 @@ interface DeviceDetailViewProps {
     telemetry: any;
     status: 'idle' | 'running' | 'done';
     history: any[];
+    readonly?: boolean;
 }
 
-export default function DeviceDetailView({ device, settings, telemetry, status, history }: DeviceDetailViewProps) {
+export default function DeviceDetailView({ device, settings, telemetry, status, history, readonly = false }: DeviceDetailViewProps) {
     const [activeTab, setActiveTab] = useState<'monitoring' | 'history'>('monitoring');
     const router = useRouter();
 
+    // Desktop check could be done via CSS or hook, 
+    // but here we just render broadly. 
+    // Admin layout will handle container width.
+
     return (
-        <div className="min-h-screen bg-gray-50 p-6 font-sans">
-            <div className="max-w-md mx-auto space-y-6">
+        <div className={`min-h-screen bg-gray-50 p-6 font-sans ${readonly ? 'w-full' : ''}`}>
+            <div className={`${readonly ? 'max-w-4xl' : 'max-w-md'} mx-auto space-y-6`}>
                 {/* Header */}
                 <div className="pt-2 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push('/devices')}
+                            onClick={() => router.push(readonly ? '/admin' : '/devices')}
                             className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-                            aria-label="Back to devices"
+                            aria-label={readonly ? "Back to admin" : "Back to devices"}
                         >
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M15 18L9 12L15 6" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -39,7 +44,7 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                         <h1 className="text-3xl font-medium text-black">SmartMocaf</h1>
                     </div>
 
-                    <DeleteDeviceButton deviceId={device.id} />
+                    {!readonly && <DeleteDeviceButton deviceId={device.id} />}
                 </div>
 
                 {/* Tabs */}
@@ -53,6 +58,7 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                             telemetry={telemetry}
                             status={status}
                             settings={settings}
+                            readonly={readonly}
                         />
                     ) : (
                         <div className="space-y-4">
