@@ -41,7 +41,7 @@ export async function updateSession(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
     // 1. If user is NOT logged in and tries to access protected routes
-    if (!user && (path.startsWith('/devices'))) {
+    if (!user && (path.startsWith('/devices') || path.startsWith('/admin'))) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)

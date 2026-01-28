@@ -30,14 +30,30 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
         try {
             if (mode === 'LOGIN') {
-                const { error } = await supabase.auth.signInWithPassword({
+                const { data, error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
                 });
                 if (error) throw error;
-                router.push('/devices');
+
+                if (data.user) {
+                    const { data: profile, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', data.user.id)
+                        .single();
+
+                    if (profileError) {
+                        console.error('Error fetching profile:', profileError);
+                        router.push('/devices');
+                    } else if (profile?.role === 'admin') {
+                        router.push('/admin');
+                    } else {
+                        router.push('/devices');
+                    }
+                }
             } else {
-                const { error } = await supabase.auth.signUp({
+                const { data, error } = await supabase.auth.signUp({
                     email,
                     password,
                     options: {
@@ -45,6 +61,22 @@ export default function AuthForm({ mode }: AuthFormProps) {
                     },
                 });
                 if (error) throw error;
+
+                if (data.user) {
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .insert([
+                            {
+                                id: data.user.id,
+                                full_name: username,
+                                role: 'farmer',
+                            },
+                        ]);
+
+                    if (profileError) {
+                        console.error('Error creating profile:', profileError);
+                    }
+                }
                 // For Supabase, usually after sign up you might need to confirm email.
                 // Assuming auto-confirm or no email verify for this local setup unless configured otherwise.
                 // But generally, we can redirect or show success.

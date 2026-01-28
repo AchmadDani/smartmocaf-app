@@ -11,9 +11,10 @@ interface MonitoringPanelProps {
         target_ph: number;
         auto_drain_enabled: boolean;
     };
+    readonly?: boolean;
 }
 
-export default function MonitoringPanel({ deviceId, telemetry, status, settings }: MonitoringPanelProps) {
+export default function MonitoringPanel({ deviceId, telemetry, status, settings, readonly = false }: MonitoringPanelProps) {
     const [isPending, startTransition] = useTransition();
     const [showPhModal, setShowPhModal] = useState(false);
     const [tempPhInput, setTempPhInput] = useState("");
@@ -134,27 +135,33 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
                         </div>
                         <span className="text-gray-700 font-medium">Buka Keran</span>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={settings.auto_drain_enabled}
-                            onChange={() => {
-                                // If running, we don't proceed (onClick/disabled handles it, but safety check)
-                                if (status === 'running') return;
+                    {readonly ? (
+                        <span className={`text-sm font-medium ${settings.auto_drain_enabled ? 'text-blue-600' : 'text-gray-400'}`}>
+                            {settings.auto_drain_enabled ? 'Terbuka' : 'Tertutup'}
+                        </span>
+                    ) : (
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                checked={settings.auto_drain_enabled}
+                                onChange={() => {
+                                    // If running, we don't proceed (onClick/disabled handles it, but safety check)
+                                    if (status === 'running') return;
 
-                                handleToggleDrain(settings.auto_drain_enabled);
-                            }}
-                            onClick={(e) => {
-                                if (status === 'running') {
-                                    e.preventDefault();
-                                    alert("Toggle dimatikan karena sedang berada pada proses fermentasi");
-                                }
-                            }}
-                            disabled={isPending}
-                            className="sr-only peer"
-                        />
-                        <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#bd7e7e] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black ${status === 'running' ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
-                    </label>
+                                    handleToggleDrain(settings.auto_drain_enabled);
+                                }}
+                                onClick={(e) => {
+                                    if (status === 'running') {
+                                        e.preventDefault();
+                                        alert("Toggle dimatikan karena sedang berada pada proses fermentasi");
+                                    }
+                                }}
+                                disabled={isPending}
+                                className="sr-only peer"
+                            />
+                            <div className={`w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#bd7e7e] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black ${status === 'running' ? 'opacity-50 cursor-not-allowed' : ''}`}></div>
+                        </label>
+                    )}
                 </div>
             </div>
 
@@ -170,9 +177,11 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
                         <span className="text-gray-900 font-medium text-lg">PH</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={handleOpenPhModal}>
+                        <div className={`flex items-center gap-2 ${readonly ? '' : 'cursor-pointer'}`} onClick={readonly ? undefined : handleOpenPhModal}>
                             <span className="text-xl font-bold text-black">{settings.target_ph}</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-black"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+                            {!readonly && (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-black"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -204,25 +213,27 @@ export default function MonitoringPanel({ deviceId, telemetry, status, settings 
             </div>
 
             {/* Bottom Button */}
-            <div className="fixed bottom-6 left-0 right-0 px-6 max-w-md mx-auto z-10">
-                {status === 'running' ? (
-                    <button
-                        onClick={handleStop}
-                        disabled={isPending}
-                        className="w-full bg-[#bd7e7e] text-white font-medium py-4 rounded-xl hover:bg-[#a66b6b] transition-colors shadow-lg disabled:opacity-50"
-                    >
-                        {isPending ? 'Processing...' : 'Selesai Fermentasi'}
-                    </button>
-                ) : (
-                    <button
-                        onClick={handleStart}
-                        disabled={isPending}
-                        className="w-full bg-[#bd7e7e] text-white font-medium py-4 rounded-xl hover:bg-[#a66b6b] transition-colors shadow-lg disabled:opacity-50"
-                    >
-                        {isPending ? 'Processing...' : 'Mulai Fermentasi'}
-                    </button>
-                )}
-            </div>
+            {!readonly && (
+                <div className="fixed bottom-6 left-0 right-0 px-6 max-w-md mx-auto z-10">
+                    {status === 'running' ? (
+                        <button
+                            onClick={handleStop}
+                            disabled={isPending}
+                            className="w-full bg-[#bd7e7e] text-white font-medium py-4 rounded-xl hover:bg-[#a66b6b] transition-colors shadow-lg disabled:opacity-50"
+                        >
+                            {isPending ? 'Processing...' : 'Selesai Fermentasi'}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleStart}
+                            disabled={isPending}
+                            className="w-full bg-[#bd7e7e] text-white font-medium py-4 rounded-xl hover:bg-[#a66b6b] transition-colors shadow-lg disabled:opacity-50"
+                        >
+                            {isPending ? 'Processing...' : 'Mulai Fermentasi'}
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Spacer to prevent button from covering content */}
             <div className="h-24"></div>
