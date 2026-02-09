@@ -2,38 +2,39 @@ import Link from 'next/link';
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import AutoRefresh from '@/components/AutoRefresh';
-import DeviceCard from '@/components/DeviceCard';
+import RealtimeDeviceStats from '@/components/admin/RealtimeDeviceStats';
+import { formatTimeAgo } from '@/utils/date';
 
 export default async function AdminPage() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-        redirect('/login');
+        redirect('/auth/login');
     }
 
     // Role Check
     const { data: profile } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, full_name')
         .eq('id', user.id)
         .single();
 
     if (profile?.role !== 'admin') {
-        redirect('/devices');
+        redirect('/farmer');
     }
 
-    // Fetch ALL devices
+    // Fetch ALL devices with RLS bypass for admin
     const { data: devices } = await supabase
         .from('devices')
-        .select('*')
+        .select('*, profiles!devices_owner_id_fkey(full_name)')
         .order('created_at', { ascending: false });
 
-    // Fetch details
+    // Fetch details for each device
     const devicesWithData = await Promise.all((devices || []).map(async (device) => {
         const { data: runs } = await supabase
             .from('fermentation_runs')
-            .select('status')
+            .select('status, mode')
             .eq('device_id', device.id)
             .order('created_at', { ascending: false })
             .limit(1);
@@ -52,7 +53,7 @@ export default async function AdminPage() {
 
         const { data: telemetries } = await supabase
             .from('telemetry')
-            .select('ph, temp_c')
+            .select('ph, temp_c, water_level, created_at')
             .eq('device_id', device.id)
             .order('created_at', { ascending: false })
             .limit(1);
@@ -63,70 +64,177 @@ export default async function AdminPage() {
             ...device,
             statusDisplay,
             statusColor,
-            temp: latestTelemetry?.temp_c || '--',
-            ph: latestTelemetry?.ph || '--'
+            mode: latestRun?.mode || 'auto',
+            temp: latestTelemetry?.temp_c ?? '--',
+            ph: latestTelemetry?.ph ?? '--',
+            waterLevel: latestTelemetry?.water_level ?? '--',
+            lastTelemetry: latestTelemetry?.created_at,
+            ownerName: device.profiles?.full_name || null,
+            isUnassigned: !device.owner_id
         };
     }));
 
+    const totalDevices = devicesWithData.length;
+    const onlineDevices = devicesWithData.filter(d => d.is_online).length;
+    const runningDevices = devicesWithData.filter(d => d.statusDisplay === 'Berjalan').length;
+    const unassignedDevices = devicesWithData.filter(d => d.isUnassigned).length;
+
+    // Fetch MQTT Status
+    const { data: mqttStatus } = await supabase
+        .from('mqtt_status')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
     return (
-        <div className="font-sans">
+        <div className="space-y-6">
             {/* Header Area */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                    <h1 className="text-2xl font-bold text-gray-900">Dashboard Admin</h1>
                     <p className="text-gray-500 mt-1">Pantau seluruh perangkat dalam satu tampilan</p>
                 </div>
-                <div className="bg-white px-4 py-2 rounded-lg shadow-sm text-sm text-gray-600 font-medium">
-                    Current Time: {new Date().toLocaleTimeString()}
-                </div>
-            </div>
-
-            {/* Stats Overview (Optional Placeholder) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="text-sm font-medium text-gray-500 mb-2">Total Perangkat</div>
-                    <div className="text-3xl font-bold text-gray-900">{devicesWithData.length}</div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="text-sm font-medium text-gray-500 mb-2">Sedang Berjalan</div>
-                    <div className="text-3xl font-bold text-green-600">
-                        {devicesWithData.filter(d => d.statusDisplay === 'Berjalan').length}
-                    </div>
-                </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div className="text-sm font-medium text-gray-500 mb-2">Butuh Perhatian</div>
-                    <div className="text-3xl font-bold text-orange-500">
-                        0
+                <div className="flex items-center gap-3">
+                    <div className="bg-white px-4 py-2 rounded-xl shadow-sm text-sm text-gray-600 font-medium border border-gray-100">
+                        {new Date().toLocaleString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            day: 'numeric',
+                            month: 'short'
+                        })}
                     </div>
                 </div>
             </div>
 
-            {/* Device Grid */}
-            <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">Daftar Alat</h2>
+            {/* MQTT Status Section */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-[#009e3e]/10 rounded-lg flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-[#009e3e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+                                <path d="M1.42 9a16 16 0 0 1 21.16 0" />
+                                <path d="M8.59 16.11a6 6 0 0 1 6.82 0" />
+                                <circle cx="12" cy="20" r="1" />
+                            </svg>
+                        </div>
+                        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Status Koneksi MQTT</h2>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">{mqttStatus?.status || 'Active'}</span>
+                    </div>
+                </div>
+                <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Webhook Endpoint</p>
+                        <p className="text-sm font-mono text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 break-all">
+                            {mqttStatus?.endpoint_url || '/api/mqtt-webhook'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Terakhir Diterima</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                            {mqttStatus?.last_received_at 
+                                ? formatTimeAgo(mqttStatus.last_received_at) 
+                                : 'Belum ada data'}
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-0.5">
+                            {mqttStatus?.last_received_at 
+                                ? new Date(mqttStatus.last_received_at).toLocaleTimeString('id-ID')
+                                : '-'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Payload Terakhir</p>
+                        <div className="max-h-24 overflow-y-auto bg-gray-900 rounded-xl p-3 scrollbar-hide">
+                            <pre className="text-[10px] font-mono text-emerald-400">
+                                {mqttStatus?.last_payload 
+                                    ? JSON.stringify(mqttStatus.last_payload, null, 2) 
+                                    : '// Menunggu payload...'}
+                            </pre>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {devicesWithData.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-                    <p className="text-gray-500 text-lg">Tidak ada alat terhubung saat ini.</p>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Total Alat</p>
+                            <p className="text-2xl font-bold text-gray-900">{totalDevices}</p>
+                        </div>
+                    </div>
                 </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {devicesWithData.map((device) => (
-                        <DeviceCard
-                            key={device.id}
-                            id={device.id}
-                            name={device.name}
-                            statusDisplay={device.statusDisplay}
-                            statusColor={device.statusColor}
-                            temp={device.temp}
-                            ph={device.ph}
-                            href={`/admin/device/${device.id}`}
-                        />
-                    ))}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Online</p>
+                            <p className="text-2xl font-bold text-green-600">{onlineDevices}</p>
+                        </div>
+                    </div>
                 </div>
-            )}
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-[#009e3e]/10 rounded-xl flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-[#009e3e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Fermentasi</p>
+                            <p className="text-2xl font-bold text-[#009e3e]">{runningDevices}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                <line x1="12" y1="9" x2="12" y2="13"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p className="text-sm text-gray-500">Belum Diklaim</p>
+                            <p className="text-2xl font-bold text-orange-600">{unassignedDevices}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Device List */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-5 border-b border-gray-100">
+                    <h2 className="text-lg font-bold text-gray-900">Daftar Semua Alat (Real-time)</h2>
+                </div>
+
+                {devicesWithData.length === 0 ? (
+                    <div className="text-center py-16">
+                        <p className="text-gray-500 text-lg">Tidak ada alat terdaftar</p>
+                    </div>
+                ) : (
+                    <RealtimeDeviceStats initialDevices={devicesWithData} />
+                )}
+            </div>
             <AutoRefresh />
         </div>
     );
 }
+

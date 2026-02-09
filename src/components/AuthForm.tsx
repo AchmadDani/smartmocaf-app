@@ -1,10 +1,13 @@
 'use client';
 
+import { signInWithUsername } from '@/app/actions/auth';
+
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+// import Image from 'next/image'; // Logo moved to header
 import { createClient } from '@/utils/supabase/client';
-import { usernameToEmail } from '@/lib/auth';
+import { showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
 
 interface AuthFormProps {
     mode: 'LOGIN' | 'REGISTER';
@@ -14,159 +17,217 @@ export default function AuthForm({ mode }: AuthFormProps) {
     const router = useRouter();
     const supabase = createClient();
 
+    // Login fields
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    
+    // Register fields (additional)
+    const [fullName, setFullName] = useState('');
+    const [email, setEmail] = useState('');
+    
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
-    const [infoMsg, setInfoMsg] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg(null);
-        setInfoMsg(null);
         setLoading(true);
-
-        const email = usernameToEmail(username);
+        showLoading(mode === 'LOGIN' ? 'MENGECEK AKUN...' : 'MENDAFTARKAN AKUN...');
 
         try {
             if (mode === 'LOGIN') {
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-                if (error) throw error;
+                // Construct FormData for server action
+                const formData = new FormData();
+                formData.append('identifier', username);
+                formData.append('password', password);
 
-                if (data.user) {
-                    const { data: profile, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', data.user.id)
-                        .single();
+                const result = await signInWithUsername(null, formData);
+                
+                if (result.error) {
+                    throw new Error(result.error);
+                }
 
-                    if (profileError) {
-                        console.error('Error fetching profile:', profileError);
-                        router.push('/devices');
-                    } else if (profile?.role === 'admin') {
-                        router.push('/admin');
-                    } else {
-                        router.push('/devices');
-                    }
+                closeSwal();
+                await showSuccess('Selamat Datang!', 'Berhasil masuk ke sistem SmartMocaf.');
+                
+                if (result.redirectUrl) {
+                    router.push(result.redirectUrl);
                 }
             } else {
-                const { data, error } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: { username },
-                    },
+                // Register: panggil API route
+                const res = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fullName,
+                        username,
+                        email,
+                        password
+                    })
                 });
-                if (error) throw error;
 
-                if (data.user) {
-                    const { error: profileError } = await supabase
-                        .from('profiles')
-                        .insert([
-                            {
-                                id: data.user.id,
-                                full_name: username,
-                                role: 'farmer',
-                            },
-                        ]);
+                const result = await res.json();
 
-                    if (profileError) {
-                        console.error('Error creating profile:', profileError);
+                if (!res.ok) {
+                    let indoError = result.error || 'Gagal mendaftar.';
+                    if (indoError.toLowerCase().includes('already exists')) {
+                        indoError = 'Username atau Email sudah terdaftar.';
                     }
+                    throw new Error(indoError);
                 }
-                // For Supabase, usually after sign up you might need to confirm email.
-                // Assuming auto-confirm or no email verify for this local setup unless configured otherwise.
-                // But generally, we can redirect or show success.
-                // If "Email Confirm" is off, session is created and we can redirect.
-                // However, let's keep the previous flow's logic: "Akun berhasil dibuat. Silakan masuk." logic was likely because of "Login" button needed to be pressed or just auto-login?
-                // `signUp` returns a session if "Email Confirm" is disabled.
 
-                // Let's stick to the previous behavior: redirect to login or show message?
-                // The previous code showed "Akun berhasil dibuat. Silakan masuk." and switched mode to LOGIN.
-                // Since we are splitting pages, we should redirect to /login or show a success message with link.
-
-                setInfoMsg('Akun berhasil dibuat. Silakan masuk.');
-                // Optional: router.push('/login');
+                closeSwal();
+                await showSuccess('Pendaftaran Berhasil', 'Silakan masuk dengan akun yang baru dibuat.');
+                router.push('/auth/login');
             }
         } catch (err: any) {
-            setErrorMsg(err.message || 'Terjadi kesalahan');
+            closeSwal();
+            setErrorMsg(err.message || 'Terjadi kesalahan sistem.');
+            showError('Gagal', err.message || 'Silakan periksa kembali data Anda.');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="w-full max-w-sm bg-white p-8 rounded-2xl shadow-sm">
-            <h1 className="text-2xl font-bold text-center text-gray-900 mb-2">SmartMocaf</h1>
-            <p className="text-center text-gray-500 mb-8">
-                {mode === 'LOGIN' ? 'Masuk untuk memantau perangkat' : 'Daftar akun baru'}
-            </p>
+        <div className="w-full max-w-md mx-auto">
+            {/* Header Text Only */}
+            <div className="text-center mb-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    {mode === 'LOGIN' ? 'Selamat Datang' : 'Buat Akun Baru'}
+                </h1>
+                <p className="text-gray-500">
+                    {mode === 'LOGIN' ? 'Silakan masuk untuk melanjutkan' : 'Daftar sekarang untuk mulai monitoring'}
+                </p>
+            </div>
 
-            {errorMsg && (
-                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                    {errorMsg}
-                </div>
-            )}
-
-            {infoMsg && (
-                <div className="mb-4 p-3 bg-green-50 text-green-600 text-sm rounded-lg border border-green-100">
-                    {infoMsg}
-                </div>
-            )}
-
-            <form className="space-y-4" onSubmit={handleSubmit}>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#bd7e7e] focus:border-transparent outline-none text-black"
-                        placeholder="petani01"
-                        required
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#bd7e7e] focus:border-transparent outline-none text-black"
-                        placeholder="••••••••"
-                        required
-                        minLength={6}
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-[#bd7e7e] text-white font-medium py-2.5 rounded-lg hover:bg-[#a66b6b] transition-colors mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {loading ? 'Memproses...' : mode === 'LOGIN' ? 'Masuk' : 'Daftar'}
-                </button>
-            </form>
-
-            <div className="mt-6 text-center text-sm text-gray-500">
-                {mode === 'LOGIN' ? (
-                    <>
-                        Belum punya akun?{' '}
-                        <Link href="/register" className="text-[#bd7e7e] font-medium hover:underline focus:outline-none">
-                            Daftar Sekarang
-                        </Link>
-                    </>
-                ) : (
-                    <>
-                        Sudah punya akun?{' '}
-                        <Link href="/login" className="text-[#bd7e7e] font-medium hover:underline focus:outline-none">
-                            Masuk
-                        </Link>
-                    </>
+            {/* Form Card */}
+            <div className="bg-white/80 backdrop-blur-xl p-8 rounded-[2rem] shadow-xl border border-white/50 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#009e3e]/5 to-transparent rounded-full -mr-16 -mt-16 pointer-events-none" />
+                {errorMsg && (
+                    <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 flex items-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        {errorMsg}
+                    </div>
                 )}
+
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                    {/* Register: Nama Lengkap */}
+                    {mode === 'REGISTER' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                            <input
+                                type="text"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009e3e]/20 focus:border-[#009e3e] outline-none transition-all text-gray-900 placeholder-gray-400"
+                                placeholder="Masukkan nama lengkap"
+                                required
+                            />
+                        </div>
+                    )}
+                    
+                    {/* Username / Email */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Username atau Email</label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009e3e]/20 focus:border-[#009e3e] outline-none transition-all text-gray-900 placeholder-gray-400"
+                            placeholder="Username atau email"
+                            required
+                        />
+                    </div>
+
+                    {/* Register: Email */}
+                    {mode === 'REGISTER' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009e3e]/20 focus:border-[#009e3e] outline-none transition-all text-gray-900 placeholder-gray-400"
+                                placeholder="nama@email.com"
+                                required
+                            />
+                        </div>
+                    )}
+                    
+                    {/* Password */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Kata Sandi</label>
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full pl-4 pr-12 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009e3e]/20 focus:border-[#009e3e] outline-none transition-all text-gray-900 placeholder-gray-400"
+                                placeholder="••••••••"
+                                required
+                                minLength={6}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                {showPassword ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                                        <line x1="1" y1="1" x2="23" y2="23" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-gradient-to-r from-[#009e3e] to-[#00c853] text-white font-bold py-4 rounded-2xl hover:shadow-lg hover:shadow-[#009e3e]/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    >
+                        {loading ? 'Memproses...' : mode === 'LOGIN' ? 'Masuk' : 'Daftar'}
+                    </button>
+                </form>
+
+                <div className="mt-8 text-center text-sm">
+                    {mode === 'LOGIN' ? (
+                        <p className="text-gray-500">
+                            Belum punya akun?{' '}
+                            <Link href="/auth/register" className="text-[#009e3e] font-semibold hover:underline">
+                                Daftar sekarang
+                            </Link>
+                        </p>
+                    ) : (
+                        <p className="text-gray-500">
+                            Sudah punya akun?{' '}
+                            <Link href="/auth/login" className="text-[#009e3e] font-semibold hover:underline">
+                                Masuk di sini
+                            </Link>
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            <div className="text-center mt-8">
+                <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors inline-flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Kembali ke Beranda
+                </Link>
             </div>
         </div>
     );

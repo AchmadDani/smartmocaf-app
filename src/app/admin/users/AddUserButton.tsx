@@ -10,9 +10,9 @@ export default function AddUserButton() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="bg-[#bd7e7e] text-white px-4 py-2 rounded-lg hover:bg-[#a66b6b] transition-colors font-medium flex items-center gap-2"
+                className="bg-[#009e3e] text-white px-5 py-3 rounded-xl hover:bg-[#007d31] transition-all font-bold flex items-center gap-2 shadow-lg shadow-[#009e3e]/20"
             >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                 Tambah User
             </button>
             <AddUserDialog isOpen={isOpen} onClose={() => setIsOpen(false)} />

@@ -1,5 +1,8 @@
 'use client';
 
+import Image from 'next/image';
+import Link from 'next/link';
+
 interface AdminHeaderProps {
     user: {
         full_name?: string | null;
@@ -12,13 +15,24 @@ export default function AdminHeader({ user }: AdminHeaderProps) {
     const initial = displayName[0]?.toUpperCase() || 'A';
 
     return (
-        <header className="bg-white px-8 py-4 border-b border-gray-100 flex justify-end items-center sticky top-0 z-10 w-full mb-8">
-            <div className="flex items-center gap-3">
+        <header className="bg-white px-8 py-4 border-b border-gray-100 flex justify-between items-center sticky top-0 z-10 w-full mb-8">
+            <div className="flex items-center lg:hidden">
+                <Link href="/admin">
+                    <Image 
+                        src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
+                        alt="SmartMocaf"
+                        width={120}
+                        height={32}
+                        className="h-8 w-auto object-contain"
+                    />
+                </Link>
+            </div>
+            <div className="flex items-center gap-3 ml-auto">
                 <div className="text-right hidden sm:block">
                     <p className="text-sm font-semibold text-gray-900">{displayName}</p>
                     <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-[#bd7e7e]/10 text-[#bd7e7e] flex items-center justify-center font-bold text-lg border-2 border-white shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-[#009e3e]/10 text-[#009e3e] flex items-center justify-center font-bold text-lg border-2 border-white shadow-sm">
                     {initial}
                 </div>
             </div>

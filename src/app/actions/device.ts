@@ -17,6 +17,35 @@ export async function createDevice(name: string, deviceCode: string) {
     const supabase = await createClient();
     const userId = await getUserId();
 
+    // Check if device already exists (auto-discovered) but unowned
+    const { data: existingDevice } = await supabase
+        .from('devices')
+        .select('id, owner_id')
+        .eq('device_code', deviceCode)
+        .maybeSingle();
+
+    if (existingDevice) {
+        if (existingDevice.owner_id && existingDevice.owner_id !== userId) {
+            throw new Error('Alat ini sudah dimiliki oleh pengguna lain.');
+        }
+
+        // Claim existing device
+        const { data, error } = await supabase
+            .from('devices')
+            .update({
+                owner_id: userId,
+                name: name,
+            })
+            .eq('id', existingDevice.id)
+            .select()
+            .single();
+
+        if (error) throw new Error(error.message);
+        revalidatePath('/farmer');
+        return data;
+    }
+
+    // Otherwise create new
     const { data, error } = await supabase
         .from('devices')
         .insert({
@@ -28,7 +57,8 @@ export async function createDevice(name: string, deviceCode: string) {
         .single();
 
     if (error) throw new Error(error.message);
-    revalidatePath('/devices');
+    revalidatePath('/farmer');
+    revalidatePath('/admin');
     return data;
 }
 
@@ -103,27 +133,22 @@ export async function updateDeviceSettings(deviceId: string, settings: { target_
         telemetry: telemetryConfig
     });
 
-    revalidatePath(`/devices/${deviceId}`);
+    revalidatePath(`/farmer/${deviceId}`);
 }
 
 export async function manualDrainToggle(deviceId: string, open: boolean) {
-    // Helper to check if running
     const supabase = await createClient();
+    await getUserId();
 
-    // Check if running
+    // Check if running - for logging/command purposes
     const { data: runningRun } = await supabase
         .from('fermentation_runs')
-        .select('id')
+        .select('id, mode')
         .eq('device_id', deviceId)
         .eq('status', 'running')
         .single();
 
-    if (runningRun) {
-        throw new Error("Cannot toggle drain while fermentation is running");
-    }
-
     // 1. Update source of truth (device_settings)
-    // The UI toggle state relies on this value.
     const { error: updateError } = await supabase
         .from('device_settings')
         .update({
@@ -134,13 +159,18 @@ export async function manualDrainToggle(deviceId: string, open: boolean) {
 
     if (updateError) throw new Error("Failed to update settings: " + updateError.message);
 
-    // 2. Create Command
-    await createDeviceCommand(deviceId, open ? 'DRAIN_OPEN' : 'DRAIN_CLOSE', { source: 'manual' });
+    // 2. Create Command with source tag
+    const source = runningRun ? 'manual_override' : 'manual';
+    await createDeviceCommand(
+        deviceId, 
+        open ? 'DRAIN_OPEN' : 'DRAIN_CLOSE', 
+        { source, run_id: runningRun?.id }
+    );
 
-    revalidatePath(`/devices/${deviceId}`);
+    revalidatePath(`/farmer/${deviceId}`);
 }
 
-export async function startFermentation(deviceId: string) {
+export async function startFermentation(deviceId: string, mode: 'auto' | 'manual' = 'auto') {
     const supabase = await createClient();
     const userId = await getUserId();
 
@@ -153,12 +183,23 @@ export async function startFermentation(deviceId: string) {
 
     const targetPh = settings?.target_ph || 4.5;
 
+    // Get current water level for auto mode tracking
+    const { data: latestTelemetry } = await supabase
+        .from('telemetry')
+        .select('water_level')
+        .eq('device_id', deviceId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
     const { data: newRun, error } = await supabase
         .from('fermentation_runs')
         .insert({
             device_id: deviceId,
             status: 'running',
             target_ph: targetPh,
+            mode: mode,
+            water_level_at_start: latestTelemetry?.water_level || null,
             started_at: new Date().toISOString(),
             created_by: userId,
         })
@@ -170,17 +211,17 @@ export async function startFermentation(deviceId: string) {
     // Create RUN_START command
     await createDeviceCommand(deviceId, 'RUN_START', {
         target_ph: targetPh,
-        mode: 'auto',
+        mode: mode,
         telemetry: {
             temp_interval_sec: 60,
             ph_interval_sec: 10800,
             ph_near_target_interval_sec: 300,
             near_target_delta: 0.2
         }
-    }, newRun.id); // Passing newRun.id
+    }, newRun.id);
 
-    revalidatePath(`/devices/${deviceId}`);
-    revalidatePath('/devices'); // Status changes in list too
+    revalidatePath(`/farmer/${deviceId}`);
+    revalidatePath('/farmer');
 }
 
 export async function stopFermentation(deviceId: string) {
@@ -212,8 +253,8 @@ export async function stopFermentation(deviceId: string) {
         await createDeviceCommand(deviceId, 'RUN_STOP', { reason: 'user_stop' }, latestRun.id);
     }
 
-    revalidatePath(`/devices/${deviceId}`);
-    revalidatePath('/devices');
+    revalidatePath(`/farmer/${deviceId}`);
+    revalidatePath('/farmer');
 }
 
 export async function simulateTelemetry(deviceId: string) {
@@ -244,8 +285,8 @@ export async function simulateTelemetry(deviceId: string) {
         });
 
     if (error) throw new Error(error.message);
-    revalidatePath(`/devices/${deviceId}`);
-    revalidatePath('/devices');
+    revalidatePath(`/farmer/${deviceId}`);
+    revalidatePath('/farmer');
 }
 
 
@@ -302,5 +343,5 @@ export async function deleteDevice(deviceId: string) {
 
     if (error) throw new Error(error.message);
 
-    revalidatePath('/devices');
+    revalidatePath('/farmer');
 }

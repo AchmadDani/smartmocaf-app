@@ -41,16 +41,29 @@ export async function updateSession(request: NextRequest) {
     const path = request.nextUrl.pathname;
 
     // 1. If user is NOT logged in and tries to access protected routes
-    if (!user && (path.startsWith('/devices') || path.startsWith('/admin'))) {
+    if (!user && (path.startsWith('/farmer') || path.startsWith('/admin'))) {
         const url = request.nextUrl.clone()
-        url.pathname = '/login'
+        url.pathname = '/auth/login'
         return NextResponse.redirect(url)
     }
 
     // 2. If user IS logged in and tries to access public auth routes
-    if (user && (path === '/login' || path === '/register')) {
+    if (user && (path === '/auth/login' || path === '/auth/register' || path === '/login' || path === '/register')) {
         const url = request.nextUrl.clone()
-        url.pathname = '/devices'
+        
+        // Fetch role
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .single()
+
+        if (profile?.role === 'admin') {
+            url.pathname = '/admin'
+        } else {
+            url.pathname = '/farmer'
+        }
+        
         return NextResponse.redirect(url)
     }
 
