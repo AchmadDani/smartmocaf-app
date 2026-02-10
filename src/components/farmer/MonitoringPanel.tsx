@@ -248,18 +248,18 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             </div>
 
             {/* Controls Card */}
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-8 border-b border-gray-50">
+            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
+                <div className="p-8 border-b border-gray-50/50 bg-gray-50/30">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400">
+                            <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm">
                                 <Activity className="h-5 w-5" />
                             </div>
                             <h3 className="text-lg font-black text-gray-900 tracking-tight">Kontrol Evakuasi</h3>
                         </div>
                         <Badge 
                             variant="outline"
-                            className={`px-4 py-2 rounded-2xl border-0 shadow-sm h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 ${liveMode === 'auto' ? 'bg-primary text-white' : 'bg-amber-500 text-white'}`}
+                            className={`px-4 py-2 rounded-2xl border-0 shadow-lg h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 ${liveMode === 'auto' ? 'bg-primary text-white shadow-primary/20' : 'bg-amber-500 text-white shadow-amber-500/20'}`}
                             onClick={() => !readonly && role === 'OWNER' && handleModeToggle(liveMode === 'auto' ? 'manual' : 'auto')}
                         >
                             {liveMode === 'auto' ? <Zap className="h-3 w-3 mr-2" /> : <Settings2 className="h-3 w-3 mr-2" />}
@@ -270,19 +270,21 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                         {liveMode === 'auto' ? 'Sistem akan membuka keran otomatis saat target pH tercapai.' : 'Peringatan: Pembuangan air kini dikontrol secara manual oleh anda.'}
                     </p>
                 </div>
-                <div className="p-8 flex items-center justify-between bg-gray-50/30">
+                <div className="p-8 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-200' : 'bg-white text-gray-300 shadow-gray-100'}`}>
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
                             <Droplets className="h-7 w-7" />
                         </div>
                         <div>
-                            <span className="text-base font-black text-gray-900 block leading-tight">
+                            <span className={`text-base font-black block leading-tight ${settings.auto_drain_enabled ? 'text-blue-600' : 'text-gray-900'}`}>
                                 {settings.auto_drain_enabled ? 'Keran Terbuka' : 'Keran Tertutup'}
                             </span>
                             {liveMode === 'manual' ? (
                                 <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1 block">Kontrol Manual Aktif</span>
+                            ) : status === 'idle' ? (
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Terkunci (Otomatis)</span>
                             ) : (
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-1 block">Terkunci (Otomatis)</span>
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-1 block">Otomatisasi Aktif</span>
                             )}
                         </div>
                     </div>
@@ -300,7 +302,9 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             {/* Progress Timeline */}
             <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
                 <h3 className="text-sm font-black text-gray-900 mb-8 flex items-center gap-3 uppercase tracking-widest">
-                    <RefreshCw className="h-4 w-4 text-primary" />
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                         <RefreshCw className="h-4 w-4 text-primary" />
+                    </div>
                     Tahapan Fermentasi
                 </h3>
                 <div className="space-y-10 relative ml-3">
@@ -328,17 +332,17 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
 
             {/* Bottom Primary Action */}
             {!readonly && role === 'OWNER' && (
-                <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white/95 to-transparent z-40">
-                    <div className="max-w-2xl mx-auto">
+                <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white/100 to-transparent z-40">
+                    <div className="max-w-2xl mx-auto px-4">
                         {status === 'running' ? (
                             <Button
                                 size="lg"
                                 variant="destructive"
-                                className="w-full h-20 rounded-[2rem] font-black text-lg shadow-2xl shadow-red-500/20 gap-4 active:scale-[0.98] transition-all border-none bg-red-600 hover:bg-red-700"
+                                className="w-full h-20 rounded-[2rem] font-black text-lg shadow-[0_15px_40px_rgba(220,38,38,0.3)] gap-4 active:scale-[0.98] transition-all border-none bg-red-600 hover:bg-red-700 group/btn"
                                 onClick={handleStop}
                                 disabled={isPending}
                             >
-                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
                                     <Square className="fill-white h-5 w-5" />
                                 </div>
                                 <span className="uppercase tracking-widest">{isPending ? 'Selesaikan...' : 'Selesaikan Batch'}</span>
@@ -346,11 +350,11 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                         ) : (
                             <Button
                                 size="lg"
-                                className="w-full h-20 rounded-[2rem] font-black text-lg shadow-2xl shadow-primary/30 gap-4 active:scale-[0.98] transition-all border-none bg-gray-900 hover:bg-black"
+                                className="w-full h-20 rounded-[2rem] font-black text-lg shadow-[0_15px_40px_rgba(17,24,39,0.2)] gap-4 active:scale-[0.98] transition-all border-none bg-gray-900 hover:bg-black group/btn"
                                 onClick={handleStart}
                                 disabled={isPending}
                             >
-                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
                                     <Play className="fill-white h-5 w-5" />
                                 </div>
                                 <span className="uppercase tracking-widest">{isPending ? 'Memproses...' : 'Mulai Batch Baru'}</span>

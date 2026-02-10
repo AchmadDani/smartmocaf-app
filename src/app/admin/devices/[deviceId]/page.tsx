@@ -122,7 +122,9 @@ export default async function AdminDeviceDetailPage({ params }: { params: Promis
                             <DeviceSettingsForm 
                                 deviceId={device.id} 
                                 initialMaxUsers={device.maxUsers} 
-                                currentSettings={device.settings}
+                                currentSettings={device.settings ? {
+                                    targetPh: Number(device.settings.targetPh)
+                                } as any : null}
                             />
                         </CardContent>
                     </Card>

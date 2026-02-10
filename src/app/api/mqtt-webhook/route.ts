@@ -74,25 +74,36 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        // Insert telemetry
-        await prisma.telemetry.create({
-            data: {
-                deviceId: device.id,
-                runId: activeRun?.id || null,
-                tempC: payload.temp,
-                ph: payload.ph,
-                waterLevel: Math.round(payload.water_level || 0)
-            }
-        });
-
-        // Check for auto-drain conditions
+        // 📝 DATA LOGGING CONCEPT:
+        // 1. Only log to DB if fermentation is active (activeRun exists)
+        // 2. Log exactly once every 30 minutes to keep history tidy
         if (activeRun) {
+            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+            const lastTelemetry = await prisma.telemetry.findFirst({
+                where: { runId: activeRun.id },
+                orderBy: { createdAt: 'desc' }
+            });
+
+            // Save if first record for batch OR last record is older than 30 mins
+            if (!lastTelemetry || lastTelemetry.createdAt < thirtyMinutesAgo) {
+                await prisma.telemetry.create({
+                    data: {
+                        deviceId: device.id,
+                        runId: activeRun.id,
+                        tempC: payload.temp,
+                        ph: payload.ph,
+                        waterLevel: Math.round(payload.water_level || 0)
+                    }
+                });
+            }
+
+            // Always check for auto-drain conditions if batched
             const settings = await prisma.deviceSettings.findUnique({
                 where: { deviceId: device.id }
             });
 
             if (activeRun.mode === 'auto' && settings) {
-                const targetPh = Number(activeRun.startedAt ? settings.targetPh : settings.targetPh); // Simplified
+                const targetPh = Number(settings.targetPh);
                 const currentPh = payload.ph;
 
                 if (currentPh <= targetPh + 0.1 && !settings.autoDrainEnabled) {
@@ -105,12 +116,10 @@ export async function POST(request: NextRequest) {
                         data: {
                             deviceId: device.id,
                             command: 'DRAIN_OPEN',
-                            payload: { source: 'auto', reason: 'ph_target_reached' },
+                            payload: { source: 'auto', reason: 'ph_target_reached', run_id: activeRun.id },
                             status: 'queued'
                         }
                     });
-
-                    console.log(`Auto drain triggered for device ${deviceCode} - pH ${currentPh} <= target ${targetPh}`);
                 }
             }
         }

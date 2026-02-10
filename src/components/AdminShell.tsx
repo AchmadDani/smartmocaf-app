@@ -25,7 +25,7 @@ export default function AdminShell({ user, children }: AdminShellProps) {
     };
 
     return (
-        <div className="min-h-screen bg-[#F5F5F5]">
+        <div className="min-h-screen bg-[#F8F9FA]">
             <AdminSidebar 
                 isOpen={sidebarOpen} 
                 isCollapsed={isCollapsed}
@@ -33,13 +33,17 @@ export default function AdminShell({ user, children }: AdminShellProps) {
                 onToggleCollapse={toggleCollapse}
             />
 
-            <div className={`flex flex-col min-h-screen transition-all duration-300 ${isCollapsed ? 'lg:ml-[80px]' : 'lg:ml-64'}`}>
+            <div className={`
+                flex flex-col min-h-screen transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) 
+                ${isCollapsed ? 'lg:ml-[88px]' : 'lg:ml-[280px]'}
+            `}>
                 <AdminHeader user={user} onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
 
-                <main className="flex-1 px-4 sm:px-6 lg:px-8 pb-8 pt-6">
+                <main className="flex-1 px-4 sm:px-8 lg:px-10 pb-12 pt-8">
                     {children}
                 </main>
             </div>
         </div>
     );
 }
+

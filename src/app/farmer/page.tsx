@@ -76,13 +76,15 @@ export default async function FarmerDashboardPage() {
         const latestTelemetry = device.telemetry[0];
 
         return {
-            ...device,
+            id: device.id,
+            name: device.name,
+            deviceCode: device.deviceCode,
             role: link.role,
             statusDisplay,
             statusColor,
             mode: latestRun?.mode || 'auto',
-            temp: latestTelemetry?.tempC ?? '--',
-            ph: latestTelemetry?.ph ?? '--',
+            temp: latestTelemetry?.tempC ? Number(latestTelemetry.tempC) : '--',
+            ph: latestTelemetry?.ph ? Number(latestTelemetry.ph) : '--',
             waterLevel: latestTelemetry?.waterLevel ?? '--',
             isOnline: device.isOnline
         } as any;
@@ -190,7 +192,9 @@ export default async function FarmerDashboardPage() {
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-10 leading-relaxed">
                             Hubungkan unit fermenter SmartMocaf Anda<br/>untuk mulai mengumpulkan data.
                         </p>
-                        <AddDeviceDialog />
+                        <div className="flex justify-center">
+                            <AddDeviceDialog />
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-6">
@@ -199,7 +203,7 @@ export default async function FarmerDashboardPage() {
                                 key={device.id}
                                 id={device.id}
                                 name={device.name}
-                                deviceCode={device.device_code}
+                                deviceCode={device.deviceCode}
                                 statusDisplay={device.statusDisplay}
                                 statusColor={device.statusColor}
                                 temp={device.temp}

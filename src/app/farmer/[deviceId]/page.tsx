@@ -58,8 +58,13 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
     const latestRun = device.fermentationRuns[0];
     const status = latestRun?.status || 'idle';
 
-    // 4. Telemetry
-    const telemetry = device.telemetry[0] || null;
+    // 4. Telemetry (Convert Decimals to Numbers for Client Component)
+    const rawTelemetry = device.telemetry[0] || null;
+    const telemetry = rawTelemetry ? {
+        ph: Number(rawTelemetry.ph),
+        temp_c: Number(rawTelemetry.tempC),
+        water_level: rawTelemetry.waterLevel
+    } : null;
 
     // 5. Fetch History (Completed fermentation runs)
     const historyRuns = await prisma.fermentationRun.findMany({
@@ -85,20 +90,29 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
             startedAt: run.startedAt,
             endedAt: run.endedAt,
             before: {
-                ph: startTelem?.ph || 0,
-                temp: startTelem?.tempC || 0,
+                ph: startTelem?.ph ? Number(startTelem.ph) : 0,
+                temp: startTelem?.tempC ? Number(startTelem.tempC) : 0,
             },
             after: {
-                ph: endTelem?.ph || 0,
-                temp: endTelem?.tempC || 0,
+                ph: endTelem?.ph ? Number(endTelem.ph) : 0,
+                temp: endTelem?.tempC ? Number(endTelem.tempC) : 0,
             }
         };
     });
 
     return (
         <DeviceDetailView
-            device={device as any}
-            settings={settings as any}
+            device={{
+                id: device.id,
+                name: device.name,
+                deviceCode: device.deviceCode,
+                isOnline: device.isOnline,
+                lastSeen: device.lastSeen
+            } as any}
+            settings={{
+                target_ph: Number(settings.targetPh),
+                auto_drain_enabled: settings.autoDrainEnabled
+            } as any}
             status={status as any}
             telemetry={telemetry as any}
             history={history as any}

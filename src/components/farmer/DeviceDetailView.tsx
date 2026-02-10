@@ -64,10 +64,10 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                 </header>
 
                 {/* Device Info Header */}
-                <div className="px-6 py-10 bg-white border-b border-gray-100">
+                <div className="px-6 py-10 bg-white border-b border-gray-100/80">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                         <div className="flex items-center gap-5">
-                            <div className={`w-16 h-16 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 shadow-sm ${
+                            <div className={`w-16 h-16 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${
                                 device.isOnline ? 'bg-emerald-50 text-emerald-600 ring-4 ring-emerald-50/50' : 'bg-gray-100 text-gray-400'
                             }`}>
                                 <Cpu className="h-8 w-8" />
@@ -76,11 +76,11 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                                 <div className="flex items-center gap-3 mb-1">
                                     <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none">{device.name}</h1>
                                     {role === 'VIEWER' && (
-                                        <Badge variant="secondary" className="text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-lg">Shared</Badge>
+                                        <Badge variant="secondary" className="text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-lg bg-gray-100 text-gray-500">Shared</Badge>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{device.deviceCode || device.id.slice(0, 8)}</span>
+                                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest mt-1.5">
+                                    <span className="font-mono bg-gray-50/80 px-2 py-0.5 rounded-md border border-gray-100/50">{device.deviceCode || device.id.slice(0, 8)}</span>
                                     <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
                                     <div className="flex items-center gap-1.5">
                                         <Clock className="h-3 w-3" />
@@ -89,29 +89,29 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                                 </div>
                             </div>
                         </div>
-                        <Badge variant="outline" className={`gap-2 px-4 py-2 rounded-2xl border-0 shadow-sm h-11 transition-all ${device.isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
-                            <div className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-gray-300'}`} />
-                            <span className="text-[10px] font-black uppercase tracking-widest">{device.isOnline ? 'System Online' : 'Offline'}</span>
+                        <Badge variant="outline" className={`gap-2.5 px-5 py-2.5 rounded-2xl border-0 shadow-sm h-12 transition-all group ${device.isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                            <div className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_12px_rgba(16,185,129,0.5)]' : 'bg-gray-300'}`} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{device.isOnline ? 'System Online' : 'Offline Mode'}</span>
                         </Badge>
                     </div>
                 </div>
 
                 {/* Main Content with Tabs */}
-                <Tabs defaultValue="monitoring" className="flex-1 flex flex-col pt-8">
-                    <div className="px-6 mb-8">
-                        <TabsList className="w-full h-14 bg-gray-100/50 p-1.5 rounded-[1.75rem] border border-gray-100/50">
-                            <TabsTrigger value="monitoring" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:shadow-gray-200/50 data-[state=active]:text-primary transition-all">
+                <Tabs defaultValue="monitoring" className="flex-1 flex flex-col pt-10">
+                    <div className="px-6 mb-10">
+                        <TabsList className="w-full h-14 bg-gray-200/30 p-1.5 rounded-[1.75rem] border border-gray-100/50 backdrop-blur-sm">
+                            <TabsTrigger value="monitoring" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2.5 data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.06)] data-[state=active]:text-primary transition-all duration-300">
                                 <Activity className="h-4 w-4" />
                                 Real-time Monitoring
                             </TabsTrigger>
-                            <TabsTrigger value="history" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:shadow-gray-200/50 data-[state=active]:text-primary transition-all">
+                            <TabsTrigger value="history" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2.5 data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.06)] data-[state=active]:text-primary transition-all duration-300">
                                 <History className="h-4 w-4" />
                                 Batch History
                             </TabsTrigger>
                         </TabsList>
                     </div>
 
-                    <TabsContent value="monitoring" className="flex-1 px-6 pb-24 focus-visible:outline-none">
+                    <TabsContent value="monitoring" className="flex-1 px-6 pb-32 focus-visible:outline-none">
                         <MonitoringPanel
                             deviceId={device.id}
                             deviceCode={device.deviceCode}
@@ -123,8 +123,8 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                         />
                     </TabsContent>
 
-                    <TabsContent value="history" className="flex-1 px-6 pb-24 focus-visible:outline-none">
-                        <div className="space-y-5">
+                    <TabsContent value="history" className="flex-1 px-6 pb-32 focus-visible:outline-none">
+                        <div className="space-y-6">
                             {history && history.length > 0 ? (
                                 history.map((item) => (
                                     <HistoryCard key={item.id} item={item} />
