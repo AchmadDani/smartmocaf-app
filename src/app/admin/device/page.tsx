@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import MonitoringPanel from '@/components/farmer/MonitoringPanel';
 
 interface Props {
@@ -15,76 +16,57 @@ export default async function AdminDeviceDetailPage({ searchParams }: Props) {
         redirect('/admin');
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session) {
         redirect('/auth/login');
     }
 
     // Role check
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+    const userProfile = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { role: true }
+    });
 
-    if (profile?.role !== 'admin') {
+    if (userProfile?.role !== 'admin') {
         redirect('/farmer');
     }
 
     // Fetch device (admin can see all)
-    const { data: device } = await supabase
-        .from('devices')
-        .select('*, profiles!devices_owner_id_fkey(full_name)')
-        .eq('id', deviceId)
-        .single();
+    const device = await prisma.device.findUnique({
+        where: { id: deviceId },
+        include: {
+            user: {
+                select: { fullName: true }
+            },
+            settings: true,
+            fermentationRuns: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            },
+            telemetry: {
+                orderBy: { createdAt: 'desc' },
+                take: 20
+            }
+        }
+    });
 
     if (!device) {
         notFound();
     }
 
-    // Fetch latest run
-    const { data: runs } = await supabase
-        .from('fermentation_runs')
-        .select('*')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    const latestRun = runs?.[0];
+    // Process data for the UI
+    const latestRun = device.fermentationRuns[0];
     const status = latestRun?.status || 'idle';
     const mode = latestRun?.mode || 'auto';
 
-    // Fetch settings
-    const { data: settings } = await supabase
-        .from('device_settings')
-        .select('*')
-        .eq('device_id', deviceId)
-        .single();
-
     const deviceSettings = {
-        target_ph: settings?.target_ph ?? 4.5,
-        auto_drain_enabled: settings?.auto_drain_enabled ?? false,
+        target_ph: Number(device.settings?.targetPh ?? 4.5),
+        auto_drain_enabled: device.settings?.autoDrainEnabled ?? false,
     };
 
-    // Fetch latest telemetry
-    const { data: telemetries } = await supabase
-        .from('telemetry')
-        .select('*')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-    const latestTelemetry = telemetries?.[0] || null;
-
-    // Fetch recent telemetry for chart
-    const { data: recentTelemetry } = await supabase
-        .from('telemetry')
-        .select('*')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(20);
+    const latestTelemetry = device.telemetry[0] || null;
+    const recentTelemetry = device.telemetry;
 
     return (
         <div className="space-y-6">
@@ -103,16 +85,16 @@ export default async function AdminDeviceDetailPage({ searchParams }: Props) {
                         <div className="flex items-center gap-3">
                             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{device.name}</h1>
                             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                device.is_online ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                                device.isOnline ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                             }`}>
-                                <div className={`w-2 h-2 rounded-full ${device.is_online ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-                                {device.is_online ? 'Sistem Aktif' : 'Terputus'}
+                                <div className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                                {device.isOnline ? 'Sistem Aktif' : 'Terputus'}
                             </div>
                         </div>
                         <p className="text-gray-500 mt-1 flex items-center gap-2 text-sm">
-                            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold uppercase">{device.device_code || deviceId.slice(0, 8)}</span>
+                            <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-gray-600 font-bold uppercase">{device.deviceCode || deviceId.slice(0, 8)}</span>
                             <span className="text-gray-300">•</span>
-                            <span className="font-medium">Pemilik: <span className="text-gray-700 font-bold">{device.profiles?.full_name || 'Tidak Diketahui'}</span></span>
+                            <span className="font-medium">Pemilik: <span className="text-gray-700 font-bold">{device.user?.fullName || 'Tidak Diketahui'}</span></span>
                         </p>
                     </div>
                 </div>
@@ -125,14 +107,14 @@ export default async function AdminDeviceDetailPage({ searchParams }: Props) {
                         <MonitoringPanel
                             deviceId={deviceId}
                             telemetry={latestTelemetry ? {
-                                ph: latestTelemetry.ph,
-                                temp_c: latestTelemetry.temp_c,
-                                water_level: latestTelemetry.water_level
+                                ph: Number(latestTelemetry.ph),
+                                temp_c: Number(latestTelemetry.tempC),
+                                water_level: latestTelemetry.waterLevel
                             } : null}
                             status={status}
                             mode={mode}
                             settings={deviceSettings}
-                            isOnline={device.is_online ?? false}
+                            isOnline={device.isOnline ?? false}
                             readonly={true}
                         />
                     </div>
@@ -148,19 +130,19 @@ export default async function AdminDeviceDetailPage({ searchParams }: Props) {
                         <div className="space-y-4">
                             <div className="flex justify-between items-center group">
                                 <span className="text-sm font-medium text-gray-500">Device ID</span>
-                                <span className="font-mono text-sm font-bold text-[#009e3e] bg-[#009e3e]/5 px-2 py-1 rounded-lg">{device.device_code}</span>
+                                <span className="font-mono text-sm font-bold text-[#009e3e] bg-[#009e3e]/5 px-2 py-1 rounded-lg">{device.deviceCode}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-500">Koneksi</span>
-                                <span className={`text-sm font-bold uppercase tracking-wider ${device.is_online ? 'text-green-600' : 'text-gray-400'}`}>
-                                    {device.is_online ? 'Online' : 'Offline'}
+                                <span className={`text-sm font-bold uppercase tracking-wider ${device.isOnline ? 'text-green-600' : 'text-gray-400'}`}>
+                                    {device.isOnline ? 'Online' : 'Offline'}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
                                 <span className="text-sm font-medium text-gray-500">Terakhir Update</span>
                                 <span className="text-sm font-bold text-gray-900">
-                                    {device.last_seen 
-                                        ? new Date(device.last_seen).toLocaleString('id-ID', {
+                                    {device.lastSeen 
+                                        ? new Date(device.lastSeen).toLocaleString('id-ID', {
                                             hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short'
                                         })
                                         : '-'
@@ -177,22 +159,22 @@ export default async function AdminDeviceDetailPage({ searchParams }: Props) {
                     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 overflow-hidden">
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="text-lg font-bold text-gray-900">Data Realtime</h3>
-                            <button className="text-[10px] font-black uppercase tracking-widest text-[#009e3e] hover:bg-[#009e3e]/5 px-2 py-1 rounded transition-colors">Record: {recentTelemetry?.length || 0}</button>
+                            <button className="text-[10px] font-black uppercase tracking-widest text-[#009e3e] hover:bg-[#009e3e]/5 px-2 py-1 rounded transition-colors">Record: {recentTelemetry.length}</button>
                         </div>
-                        {recentTelemetry && recentTelemetry.length > 0 ? (
+                        {recentTelemetry.length > 0 ? (
                             <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                                 {recentTelemetry.slice(0, 15).map((t: any) => (
-                                    <div key={t.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                                    <div key={t.id.toString()} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
                                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                                            {new Date(t.created_at).toLocaleTimeString('id-ID', { hour12: false })}
+                                            {new Date(t.createdAt).toLocaleTimeString('id-ID', { hour12: false })}
                                         </span>
                                         <div className="flex gap-3">
                                             <div className="flex flex-col items-end">
-                                                <span className="text-xs font-black text-gray-900">{t.ph?.toFixed(2)}</span>
+                                                <span className="text-xs font-black text-gray-900">{Number(t.ph).toFixed(2)}</span>
                                                 <span className="text-[8px] font-bold text-blue-500 uppercase">pH</span>
                                             </div>
                                             <div className="flex flex-col items-end">
-                                                <span className="text-xs font-black text-gray-900">{t.temp_c?.toFixed(1)}°</span>
+                                                <span className="text-xs font-black text-gray-900">{Number(t.tempC).toFixed(1)}°</span>
                                                 <span className="text-[8px] font-bold text-orange-500 uppercase">SUHU</span>
                                             </div>
                                         </div>

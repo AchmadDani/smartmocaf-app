@@ -1,6 +1,7 @@
 import AdminSidebar from '@/components/AdminSidebar';
 import AdminHeader from '@/components/AdminHeader';
-import { createClient } from '@/utils/supabase/server';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 
 export default async function AdminLayout({
@@ -8,18 +9,15 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session) {
         redirect('/auth/login');
     }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+    const user = await prisma.user.findUnique({
+        where: { id: session.userId }
+    });
 
     return (
         <div className="min-h-screen bg-[#F8F9FA] flex">
@@ -28,7 +26,7 @@ export default async function AdminLayout({
 
             {/* Main Content Area */}
             <div className="flex-1 ml-64 flex flex-col min-h-screen">
-                <AdminHeader user={{ full_name: profile?.full_name, email: user.email }} />
+                <AdminHeader user={{ full_name: user?.fullName, email: user?.email }} />
 
                 <main className="flex-1 px-8 pb-8">
                     {children}

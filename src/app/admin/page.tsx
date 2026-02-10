@@ -1,45 +1,51 @@
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import AutoRefresh from '@/components/AutoRefresh';
 import RealtimeDeviceStats from '@/components/admin/RealtimeDeviceStats';
 import { formatTimeAgo } from '@/utils/date';
 
 export default async function AdminPage() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session) {
         redirect('/auth/login');
     }
 
     // Role Check
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('role, full_name')
-        .eq('id', user.id)
-        .single();
+    const user = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { role: true, fullName: true }
+    });
 
-    if (profile?.role !== 'admin') {
+    if (user?.role !== 'admin') {
         redirect('/farmer');
     }
 
-    // Fetch ALL devices with RLS bypass for admin
-    const { data: devices } = await supabase
-        .from('devices')
-        .select('*, profiles!devices_owner_id_fkey(full_name)')
-        .order('created_at', { ascending: false });
+    // Fetch ALL devices with owner info and latest data
+    const devices = await prisma.device.findMany({
+        include: {
+            user: {
+                select: { fullName: true }
+            },
+            fermentationRuns: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            },
+            telemetry: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            }
+        },
+        orderBy: {
+            createdAt: 'desc'
+        }
+    });
 
-    // Fetch details for each device
-    const devicesWithData = await Promise.all((devices || []).map(async (device) => {
-        const { data: runs } = await supabase
-            .from('fermentation_runs')
-            .select('status, mode')
-            .eq('device_id', device.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const latestRun = runs?.[0];
+    // Process devices for display
+    const devicesWithData = devices.map((device: any) => {
+        const latestRun = device.fermentationRuns[0];
         let statusDisplay = 'Idle';
         let statusColor = 'bg-gray-100 text-gray-600';
 
@@ -51,40 +57,33 @@ export default async function AdminPage() {
             statusColor = 'bg-blue-100 text-blue-700';
         }
 
-        const { data: telemetries } = await supabase
-            .from('telemetry')
-            .select('ph, temp_c, water_level, created_at')
-            .eq('device_id', device.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const latestTelemetry = telemetries?.[0];
+        const latestTelemetry = device.telemetry[0];
 
         return {
             ...device,
+            device_code: device.deviceCode, // Compatibility with client component
             statusDisplay,
             statusColor,
             mode: latestRun?.mode || 'auto',
-            temp: latestTelemetry?.temp_c ?? '--',
+            temp: latestTelemetry?.tempC ?? '--',
             ph: latestTelemetry?.ph ?? '--',
-            waterLevel: latestTelemetry?.water_level ?? '--',
-            lastTelemetry: latestTelemetry?.created_at,
-            ownerName: device.profiles?.full_name || null,
-            isUnassigned: !device.owner_id
-        };
-    }));
+            waterLevel: latestTelemetry?.waterLevel ?? '--',
+            lastTelemetry: latestTelemetry?.createdAt,
+            ownerName: device.user?.fullName || null,
+            isUnassigned: !device.userId,
+            is_online: device.isOnline
+        } as any;
+    });
 
     const totalDevices = devicesWithData.length;
-    const onlineDevices = devicesWithData.filter(d => d.is_online).length;
-    const runningDevices = devicesWithData.filter(d => d.statusDisplay === 'Berjalan').length;
-    const unassignedDevices = devicesWithData.filter(d => d.isUnassigned).length;
+    const onlineDevices = devicesWithData.filter((d: any) => d.is_online).length;
+    const runningDevices = devicesWithData.filter((d: any) => d.statusDisplay === 'Berjalan').length;
+    const unassignedDevices = devicesWithData.filter((d: any) => d.isUnassigned).length;
 
     // Fetch MQTT Status
-    const { data: mqttStatus } = await supabase
-        .from('mqtt_status')
-        .select('*')
-        .eq('id', 1)
-        .single();
+    const mqttStatus = await prisma.mqttStatus.findFirst({
+        orderBy: { lastUpdated: 'desc' }
+    });
 
     return (
         <div className="space-y-6">
@@ -125,26 +124,26 @@ export default async function AdminPage() {
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                         </span>
-                        <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">{mqttStatus?.status || 'Active'}</span>
+                        <span className="text-[10px] font-black text-green-600 uppercase tracking-widest">Active</span>
                     </div>
                 </div>
                 <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Webhook Endpoint</p>
                         <p className="text-sm font-mono text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 break-all">
-                            {mqttStatus?.endpoint_url || '/api/mqtt-webhook'}
+                            /api/mqtt-webhook
                         </p>
                     </div>
                     <div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Terakhir Diterima</p>
                         <p className="text-sm font-semibold text-gray-900">
-                            {mqttStatus?.last_received_at 
-                                ? formatTimeAgo(mqttStatus.last_received_at) 
+                            {mqttStatus?.lastUpdated 
+                                ? formatTimeAgo(mqttStatus.lastUpdated) 
                                 : 'Belum ada data'}
                         </p>
                         <p className="text-[10px] text-gray-500 mt-0.5">
-                            {mqttStatus?.last_received_at 
-                                ? new Date(mqttStatus.last_received_at).toLocaleTimeString('id-ID')
+                            {mqttStatus?.lastUpdated 
+                                ? new Date(mqttStatus.lastUpdated).toLocaleTimeString('id-ID')
                                 : '-'}
                         </p>
                     </div>
@@ -152,8 +151,8 @@ export default async function AdminPage() {
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Payload Terakhir</p>
                         <div className="max-h-24 overflow-y-auto bg-gray-900 rounded-xl p-3 scrollbar-hide">
                             <pre className="text-[10px] font-mono text-emerald-400">
-                                {mqttStatus?.last_payload 
-                                    ? JSON.stringify(mqttStatus.last_payload, null, 2) 
+                                {mqttStatus?.message 
+                                    ? JSON.stringify(JSON.parse(mqttStatus.message as string), null, 2) 
                                     : '// Menunggu payload...'}
                             </pre>
                         </div>

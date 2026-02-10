@@ -5,8 +5,6 @@ import { signInWithUsername } from '@/app/actions/auth';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// import Image from 'next/image'; // Logo moved to header
-import { createClient } from '@/utils/supabase/client';
 import { showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
 
 interface AuthFormProps {
@@ -15,7 +13,6 @@ interface AuthFormProps {
 
 export default function AuthForm({ mode }: AuthFormProps) {
     const router = useRouter();
-    const supabase = createClient();
 
     // Login fields
     const [username, setUsername] = useState('');

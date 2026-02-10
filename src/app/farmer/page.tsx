@@ -1,47 +1,49 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@/utils/supabase/server';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import DeviceCard from '@/components/DeviceCard';
 import AddDeviceDialog from '@/components/AddDeviceDialog';
+import { signOut } from '@/app/actions/auth';
 
 export default async function FarmerDashboardPage() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session) {
         redirect('/auth/login');
     }
 
     // Get user profile
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, role')
-        .eq('id', user.id)
-        .single();
+    const user = await prisma.user.findUnique({
+        where: { id: session.userId },
+        select: { fullName: true, role: true }
+    });
 
     // Redirect admin to admin dashboard
-    if (profile?.role === 'admin') {
+    if (user?.role === 'admin') {
         redirect('/admin');
     }
 
-    // Fetch user's devices
-    const { data: devices } = await supabase
-        .from('devices')
-        .select('*')
-        .eq('owner_id', user.id)
-        .order('created_at', { ascending: false });
+    // Fetch user's devices with latest data
+    const devices = await prisma.device.findMany({
+        where: { userId: session.userId },
+        include: {
+            fermentationRuns: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            },
+            telemetry: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            }
+        },
+        orderBy: { createdAt: 'desc' }
+    });
 
-    // Fetch device data with telemetry
-    const devicesWithData = await Promise.all((devices || []).map(async (device) => {
-        const { data: runs } = await supabase
-            .from('fermentation_runs')
-            .select('status, mode')
-            .eq('device_id', device.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const latestRun = runs?.[0];
+    // Process devices for display
+    const devicesWithData = devices.map((device: any) => {
+        const latestRun = device.fermentationRuns[0];
         let statusDisplay = 'Idle';
         let statusColor = 'bg-gray-100 text-gray-600';
 
@@ -53,29 +55,23 @@ export default async function FarmerDashboardPage() {
             statusColor = 'bg-blue-100 text-blue-700';
         }
 
-        const { data: telemetries } = await supabase
-            .from('telemetry')
-            .select('ph, temp_c, water_level, created_at')
-            .eq('device_id', device.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-        const latestTelemetry = telemetries?.[0];
+        const latestTelemetry = device.telemetry[0];
 
         return {
             ...device,
+            device_code: device.deviceCode, // Compatibility
             statusDisplay,
             statusColor,
             mode: latestRun?.mode || 'auto',
-            temp: latestTelemetry?.temp_c ?? '--',
+            temp: latestTelemetry?.tempC ?? '--',
             ph: latestTelemetry?.ph ?? '--',
-            waterLevel: latestTelemetry?.water_level ?? '--',
-            isOnline: device.is_online ?? false
-        };
-    }));
+            waterLevel: latestTelemetry?.waterLevel ?? '--',
+            isOnline: device.isOnline
+        } as any;
+    });
 
-    const onlineCount = devicesWithData.filter(d => d.isOnline).length;
-    const runningCount = devicesWithData.filter(d => d.statusDisplay === 'Berjalan').length;
+    const onlineCount = devicesWithData.filter((d: any) => d.isOnline).length;
+    const runningCount = devicesWithData.filter((d: any) => d.statusDisplay === 'Berjalan').length;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -94,7 +90,7 @@ export default async function FarmerDashboardPage() {
                         </Link>
                         <div className="flex items-center gap-2 sm:gap-4">
                             <AddDeviceDialog variant="button" />
-                            <form action="/api/auth/signout" method="POST">
+                            <form action={signOut}>
                                 <button 
                                     type="submit"
                                     className="text-gray-400 hover:text-gray-600 p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors"
@@ -115,7 +111,7 @@ export default async function FarmerDashboardPage() {
                 {/* Welcome Mobile */}
                 <div className="mb-6 sm:hidden">
                     <p className="text-gray-500 text-sm">Selamat datang,</p>
-                    <h1 className="text-xl font-bold text-gray-900">{profile?.full_name || 'Farmer'}</h1>
+                    <h1 className="text-xl font-bold text-gray-900">{user?.fullName || 'Farmer'}</h1>
                 </div>
 
                 {/* Stats - Horizontal Scroll on Mobile */}
@@ -180,7 +176,7 @@ export default async function FarmerDashboardPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {devicesWithData.map((device) => (
+                        {devicesWithData.map((device: any) => (
                             <DeviceCard
                                 key={device.id}
                                 id={device.id}

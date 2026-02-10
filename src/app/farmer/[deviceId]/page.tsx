@@ -1,119 +1,99 @@
-import { createClient } from '@/utils/supabase/server';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import DeviceDetailView from '@/components/farmer/DeviceDetailView';
 
 export default async function DeviceDetailPage({ params }: { params: Promise<{ deviceId: string }> }) {
     const { deviceId } = await params;
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session) {
         redirect('/auth/login');
     }
 
     // 1. Fetch Device & Verify Owner
-    const { data: device, error: deviceError } = await supabase
-        .from('devices')
-        .select('*')
-        .eq('id', deviceId)
-        .eq('owner_id', user.id)
-        .single();
+    const device = await prisma.device.findUnique({
+        where: { 
+            id: deviceId,
+            userId: session.userId
+        },
+        include: {
+            settings: true,
+            fermentationRuns: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            },
+            telemetry: {
+                orderBy: { createdAt: 'desc' },
+                take: 1
+            }
+        }
+    });
 
-    if (deviceError || !device) {
+    if (!device) {
         redirect('/farmer');
     }
 
-    // 2. Fetch Settings (create default if missing)
-    let { data: settings } = await supabase
-        .from('device_settings')
-        .select('*')
-        .eq('device_id', deviceId)
-        .single();
-
+    // 2. Settings Management (Handled by upsert/ensure exists)
+    let settings = device.settings;
     if (!settings) {
-        const { data: newSettings, error: createError } = await supabase
-            .from('device_settings')
-            .insert({
-                device_id: deviceId,
-                target_ph: 4.50,
-                auto_drain_enabled: false
-            })
-            .select()
-            .single();
-
-        if (!createError) {
-            settings = newSettings;
-        } else {
-            settings = { target_ph: 4.50, auto_drain_enabled: false };
-        }
+        settings = await prisma.deviceSettings.create({
+            data: {
+                deviceId,
+                targetPh: 4.50,
+                autoDrainEnabled: false
+            }
+        });
     }
 
-    // 3. Fetch Status (latest run)
-    const { data: runs } = await supabase
-        .from('fermentation_runs')
-        .select('status')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+    // 3. Status (latest run)
+    const latestRun = device.fermentationRuns[0];
+    const status = latestRun?.status || 'idle';
 
-    const status = runs?.[0]?.status || 'idle';
-
-    // 4. Fetch Telemetry
-    const { data: telemetry } = await supabase
-        .from('telemetry')
-        .select('ph, temp_c, water_level')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(1);
+    // 4. Telemetry
+    const telemetry = device.telemetry[0] || null;
 
     // 5. Fetch History (Completed fermentation runs)
-    const { data: historyRuns } = await supabase
-        .from('fermentation_runs')
-        .select('*')
-        .eq('status', 'done')
-        .eq('device_id', deviceId)
-        .order('ended_at', { ascending: false })
-        .limit(10);
+    const historyRuns = await prisma.fermentationRun.findMany({
+        where: { 
+            deviceId,
+            status: 'done' 
+        },
+        include: {
+            telemetry: {
+                orderBy: { createdAt: 'asc' }
+            }
+        },
+        orderBy: { endedAt: 'desc' },
+        take: 10
+    });
 
-    const history = await Promise.all((historyRuns || []).map(async (run) => {
-        const { data: startTelem } = await supabase
-            .from('telemetry')
-            .select('ph, temp_c')
-            .eq('run_id', run.id)
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single();
-
-        const { data: endTelem } = await supabase
-            .from('telemetry')
-            .select('ph, temp_c')
-            .eq('run_id', run.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+    const history = historyRuns.map((run: any) => {
+        const startTelem = run.telemetry[0];
+        const endTelem = run.telemetry[run.telemetry.length - 1];
 
         return {
             id: run.id,
-            startedAt: run.started_at,
-            endedAt: run.ended_at,
+            startedAt: run.startedAt,
+            endedAt: run.endedAt,
             before: {
                 ph: startTelem?.ph || 0,
-                temp: startTelem?.temp_c || 0,
+                temp: startTelem?.tempC || 0,
             },
             after: {
                 ph: endTelem?.ph || 0,
-                temp: endTelem?.temp_c || 0,
+                temp: endTelem?.tempC || 0,
             }
         };
-    }));
+    });
 
     return (
         <DeviceDetailView
-            device={device}
-            settings={settings}
+            device={device as any}
+            settings={settings as any}
             status={status}
-            telemetry={telemetry?.[0] || null}
-            history={history}
+            telemetry={telemetry as any}
+            history={history as any}
         />
     );
 }

@@ -1,6 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
+import prisma from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
 
 interface Props {
     searchParams: Promise<{ id?: string }>;
@@ -14,42 +15,39 @@ export default async function DeviceHistoryPage({ searchParams }: Props) {
         redirect('/farmer');
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const session = await getSession();
 
-    if (!user) {
+    if (!session) {
         redirect('/auth/login');
     }
 
     // Fetch device
-    const { data: device } = await supabase
-        .from('devices')
-        .select('*')
-        .eq('id', deviceId)
-        .eq('owner_id', user.id)
-        .single();
+    const device = await prisma.device.findUnique({
+        where: { 
+            id: deviceId,
+            userId: session.userId
+        }
+    });
 
     if (!device) {
         notFound();
     }
 
     // Fetch telemetry history (30-min aggregated)
-    const { data: history } = await supabase
-        .from('telemetry_history')
-        .select('*')
-        .eq('device_id', deviceId)
-        .order('recorded_at', { ascending: false })
-        .limit(50);
+    const history = await prisma.telemetryHistory.findMany({
+        where: { deviceId },
+        orderBy: { recordedAt: 'desc' },
+        take: 50
+    });
 
     // Fetch recent telemetry for fallback
-    const { data: recentTelemetry } = await supabase
-        .from('telemetry')
-        .select('*')
-        .eq('device_id', deviceId)
-        .order('created_at', { ascending: false })
-        .limit(100);
+    const recentTelemetry = await prisma.telemetry.findMany({
+        where: { deviceId },
+        orderBy: { createdAt: 'desc' },
+        take: 100
+    });
 
-    const historyData = history && history.length > 0 ? history : null;
+    const historyData = history.length > 0 ? history : null;
     const telemetryData = recentTelemetry || [];
 
     return (
@@ -81,13 +79,13 @@ export default async function DeviceHistoryPage({ searchParams }: Props) {
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                             <p className="text-xs text-gray-500 mb-1">Suhu Terakhir</p>
                             <p className="text-xl font-bold text-gray-900">
-                                {telemetryData[0]?.temp_c ?? '--'}°C
+                                {Number(telemetryData[0]?.tempC ?? 0).toFixed(1)}°C
                             </p>
                         </div>
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                             <p className="text-xs text-gray-500 mb-1">pH Terakhir</p>
                             <p className="text-xl font-bold text-gray-900">
-                                {telemetryData[0]?.ph ?? '--'}
+                                {Number(telemetryData[0]?.ph ?? 0).toFixed(2)}
                             </p>
                         </div>
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
@@ -122,38 +120,38 @@ export default async function DeviceHistoryPage({ searchParams }: Props) {
                                 <tbody className="divide-y divide-gray-100">
                                     {historyData ? (
                                         historyData.map((item: any, index: number) => (
-                                            <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                            <tr key={item.id.toString()} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                                    {formatDate(item.recorded_at)}
+                                                    {formatDate(item.recordedAt)}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right font-mono">
-                                                    <span className="text-orange-600">{item.avg_temp_c?.toFixed(1) ?? '--'}</span>
+                                                    <span className="text-orange-600">{Number(item.avgTempC)?.toFixed(1) ?? '--'}</span>
                                                     <span className="text-gray-400 text-xs">°C</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right font-mono">
-                                                    <span className="text-blue-600">{item.avg_ph?.toFixed(2) ?? '--'}</span>
+                                                    <span className="text-blue-600">{Number(item.avgPh)?.toFixed(2) ?? '--'}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right font-mono">
-                                                    <span className="text-[#009e3e]">{item.avg_water_level?.toFixed(0) ?? '--'}</span>
+                                                    <span className="text-[#009e3e]">{Number(item.avgWaterLevel)?.toFixed(0) ?? '--'}</span>
                                                     <span className="text-gray-400 text-xs">%</span>
                                                 </td>
                                             </tr>
                                         ))
                                     ) : (
                                         telemetryData.slice(0, 30).map((item: any, index: number) => (
-                                            <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                                            <tr key={item.id.toString()} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                                                 <td className="px-4 py-3 text-sm text-gray-900">
-                                                    {formatDate(item.created_at)}
+                                                    {formatDate(item.createdAt)}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right font-mono">
-                                                    <span className="text-orange-600">{item.temp_c?.toFixed(1) ?? '--'}</span>
+                                                    <span className="text-orange-600">{Number(item.tempC)?.toFixed(1) ?? '--'}</span>
                                                     <span className="text-gray-400 text-xs">°C</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right font-mono">
-                                                    <span className="text-blue-600">{item.ph?.toFixed(2) ?? '--'}</span>
+                                                    <span className="text-blue-600">{Number(item.ph)?.toFixed(2) ?? '--'}</span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-right font-mono">
-                                                    <span className="text-[#009e3e]">{item.water_level?.toFixed(0) ?? '--'}</span>
+                                                    <span className="text-[#009e3e]">{Number(item.waterLevel)?.toFixed(0) ?? '--'}</span>
                                                     <span className="text-gray-400 text-xs">%</span>
                                                 </td>
                                             </tr>
@@ -181,8 +179,7 @@ export default async function DeviceHistoryPage({ searchParams }: Props) {
     );
 }
 
-function formatDate(dateString: string): string {
-    const date = new Date(dateString);
+function formatDate(date: Date): string {
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
