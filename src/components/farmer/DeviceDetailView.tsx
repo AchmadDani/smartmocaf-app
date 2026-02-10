@@ -1,12 +1,30 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import DeviceTabs from './DeviceTabs';
 import MonitoringPanel from './MonitoringPanel';
 import HistoryCard from './HistoryCard';
 import DeleteDeviceDialog from './DeleteDeviceDialog';
+import { 
+    ChevronLeft, 
+    History, 
+    Settings2, 
+    Activity,
+    Info,
+    Clock,
+    Cpu,
+    ArrowLeft
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from '@/components/ui/badge';
+import { 
+    Card, 
+    CardContent, 
+    CardDescription, 
+    CardHeader, 
+    CardTitle 
+} from '@/components/ui/card';
 
 interface DeviceDetailViewProps {
     device: any;
@@ -14,80 +32,120 @@ interface DeviceDetailViewProps {
     telemetry: any;
     status: 'idle' | 'running' | 'done';
     history: any[];
+    role: 'OWNER' | 'VIEWER';
     readonly?: boolean;
 }
 
-export default function DeviceDetailView({ device, settings, telemetry, status, history, readonly = false }: DeviceDetailViewProps) {
-    const [activeTab, setActiveTab] = useState<'monitoring' | 'history'>('monitoring');
+export default function DeviceDetailView({ device, settings, telemetry, status, history, role, readonly = false }: DeviceDetailViewProps) {
     const router = useRouter();
 
     return (
-        <div className={`min-h-screen bg-[#F5F5F5] font-sans ${readonly ? 'w-full' : ''}`}>
-            <div className={`${readonly ? 'max-w-4xl' : 'max-w-md'} mx-auto min-h-screen flex flex-col`}>
+        <div className={`min-h-screen bg-[#FAFAFA] font-sans pb-12 ${readonly ? 'w-full' : ''}`}>
+            <div className={`${readonly ? 'max-w-4xl' : 'max-w-2xl'} mx-auto min-h-screen flex flex-col`}>
                 {/* Header */}
-                <header className="bg-white border-b border-gray-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => router.push(readonly ? '/admin' : '/farmer')}
-                            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors"
-                            aria-label={readonly ? "Back to admin" : "Back to devices"}
+                <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 h-[80px] flex items-center justify-between sticky top-0 z-50">
+                    <div className="flex items-center gap-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.push(readonly ? '/admin/devices' : '/farmer')}
+                            className="h-10 w-10 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group"
                         >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </button>
-                        <div className="flex items-center gap-2">
-                            <Image 
-                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
-                                alt="SmartMocaf"
-                                width={140}
-                                height={36}
-                                className="h-8 w-auto object-contain"
-                            />
+                            <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
+                        </Button>
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                                <span className="text-base font-black text-primary">S</span>
+                            </div>
+                            <h2 className="text-sm font-black tracking-tight text-gray-900 hidden sm:block">Control Panel</h2>
                         </div>
                     </div>
-                    {!readonly && <DeleteDeviceDialog deviceId={device.id} deviceName={device.name} />}
+                    {!readonly && role === 'OWNER' && <DeleteDeviceDialog deviceId={device.id} deviceName={device.name} />}
                 </header>
 
-                {/* Device Name */}
-                <div className="px-6 pt-4 pb-2">
-                    <h1 className="text-xl font-semibold text-gray-900">{device.name}</h1>
-                    <p className="text-sm text-gray-500">ID: {device.device_code || device.id.slice(0, 8)}</p>
+                {/* Device Info Header */}
+                <div className="px-6 py-10 bg-white border-b border-gray-100">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="flex items-center gap-5">
+                            <div className={`w-16 h-16 rounded-[1.75rem] flex items-center justify-center transition-all duration-500 shadow-sm ${
+                                device.isOnline ? 'bg-emerald-50 text-emerald-600 ring-4 ring-emerald-50/50' : 'bg-gray-100 text-gray-400'
+                            }`}>
+                                <Cpu className="h-8 w-8" />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-3 mb-1">
+                                    <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none">{device.name}</h1>
+                                    {role === 'VIEWER' && (
+                                        <Badge variant="secondary" className="text-[9px] font-black px-2 py-0.5 uppercase tracking-widest rounded-lg">Shared</Badge>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                                    <span className="font-mono bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{device.deviceCode || device.id.slice(0, 8)}</span>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+                                    <div className="flex items-center gap-1.5">
+                                        <Clock className="h-3 w-3" />
+                                        <span>Aktif {new Date(device.createdAt).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Badge variant="outline" className={`gap-2 px-4 py-2 rounded-2xl border-0 shadow-sm h-11 transition-all ${device.isOnline ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400'}`}>
+                            <div className={`w-2 h-2 rounded-full ${device.isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-gray-300'}`} />
+                            <span className="text-[10px] font-black uppercase tracking-widest">{device.isOnline ? 'System Online' : 'Offline'}</span>
+                        </Badge>
+                    </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="px-6">
-                    <DeviceTabs activeTab={activeTab} onTabChange={setActiveTab} />
-                </div>
+                {/* Main Content with Tabs */}
+                <Tabs defaultValue="monitoring" className="flex-1 flex flex-col pt-8">
+                    <div className="px-6 mb-8">
+                        <TabsList className="w-full h-14 bg-gray-100/50 p-1.5 rounded-[1.75rem] border border-gray-100/50">
+                            <TabsTrigger value="monitoring" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:shadow-gray-200/50 data-[state=active]:text-primary transition-all">
+                                <Activity className="h-4 w-4" />
+                                Real-time Monitoring
+                            </TabsTrigger>
+                            <TabsTrigger value="history" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2 data-[state=active]:bg-white data-[state=active]:shadow-lg data-[state=active]:shadow-gray-200/50 data-[state=active]:text-primary transition-all">
+                                <History className="h-4 w-4" />
+                                Batch History
+                            </TabsTrigger>
+                        </TabsList>
+                    </div>
 
-                {/* Content */}
-                <main className="flex-1 px-6 pt-4 pb-32">
-                    {activeTab === 'monitoring' ? (
+                    <TabsContent value="monitoring" className="flex-1 px-6 pb-24 focus-visible:outline-none">
                         <MonitoringPanel
                             deviceId={device.id}
+                            deviceCode={device.deviceCode}
                             telemetry={telemetry}
                             status={status}
                             settings={settings}
+                            role={role}
                             readonly={readonly}
                         />
-                    ) : (
-                        <div className="space-y-4">
+                    </TabsContent>
+
+                    <TabsContent value="history" className="flex-1 px-6 pb-24 focus-visible:outline-none">
+                        <div className="space-y-5">
                             {history && history.length > 0 ? (
                                 history.map((item) => (
                                     <HistoryCard key={item.id} item={item} />
                                 ))
                             ) : (
-                                <div className="bg-white p-6 rounded-xl shadow-sm text-center">
-                                    <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <p className="text-gray-500">Belum ada riwayat fermentasi.</p>
+                                <div className="py-24 px-8 bg-white rounded-[2.5rem] border border-gray-100 text-center shadow-sm">
+                                    <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                                        <History className="h-10 w-10 text-gray-200" />
+                                    </div>
+                                    <h3 className="text-xl font-black text-gray-900 tracking-tight mb-2">Belum Ada Riwayat</h3>
+                                    <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest max-w-[250px] mx-auto leading-relaxed">
+                                        Data batch fermentasi yang telah selesai akan otomatis diarsipkan di sini.
+                                    </p>
                                 </div>
                             )}
                         </div>
-                    )}
-                </main>
+                    </TabsContent>
+                </Tabs>
             </div>
         </div>
     );
 }
+
+

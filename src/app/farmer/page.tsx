@@ -1,3 +1,4 @@
+
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -5,7 +6,22 @@ import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import DeviceCard from '@/components/DeviceCard';
 import AddDeviceDialog from '@/components/AddDeviceDialog';
-import { signOut } from '@/app/actions/auth';
+import LogoutButton from '@/components/LogoutButton';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { 
+    Cpu, 
+    Wifi, 
+    Activity, 
+    Plus, 
+    LogOut, 
+    Search,
+    LayoutDashboard,
+    Bell,
+    Fingerprint,
+    Waves
+} from 'lucide-react';
 
 export default async function FarmerDashboardPage() {
     const session = await getSession();
@@ -14,52 +30,54 @@ export default async function FarmerDashboardPage() {
         redirect('/auth/login');
     }
 
-    // Get user profile
     const user = await prisma.user.findUnique({
         where: { id: session.userId },
         select: { fullName: true, role: true }
     });
 
-    // Redirect admin to admin dashboard
     if (user?.role === 'admin') {
         redirect('/admin');
     }
 
-    // Fetch user's devices with latest data
-    const devices = await prisma.device.findMany({
+    // Fetch devices where user is either owner or viewer
+    const deviceLinks = await prisma.deviceUser.findMany({
         where: { userId: session.userId },
         include: {
-            fermentationRuns: {
-                orderBy: { createdAt: 'desc' },
-                take: 1
-            },
-            telemetry: {
-                orderBy: { createdAt: 'desc' },
-                take: 1
+            device: {
+                include: {
+                    fermentationRuns: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
+                    },
+                    telemetry: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
+                    }
+                }
             }
         },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { joinedAt: 'desc' }
     });
 
-    // Process devices for display
-    const devicesWithData = devices.map((device: any) => {
+    const devicesWithData = deviceLinks.map((link: any) => {
+        const device = link.device;
         const latestRun = device.fermentationRuns[0];
         let statusDisplay = 'Idle';
-        let statusColor = 'bg-gray-100 text-gray-600';
+        let statusColor = 'bg-gray-50 text-gray-400 border-gray-100';
 
         if (latestRun?.status === 'running') {
             statusDisplay = 'Berjalan';
-            statusColor = 'bg-green-100 text-green-700';
+            statusColor = 'bg-emerald-50 text-emerald-600 border-emerald-100';
         } else if (latestRun?.status === 'done') {
             statusDisplay = 'Selesai';
-            statusColor = 'bg-blue-100 text-blue-700';
+            statusColor = 'bg-blue-50 text-blue-600 border-blue-100';
         }
 
         const latestTelemetry = device.telemetry[0];
 
         return {
             ...device,
-            device_code: device.deviceCode, // Compatibility
+            role: link.role,
             statusDisplay,
             statusColor,
             mode: latestRun?.mode || 'auto',
@@ -72,110 +90,110 @@ export default async function FarmerDashboardPage() {
 
     const onlineCount = devicesWithData.filter((d: any) => d.isOnline).length;
     const runningCount = devicesWithData.filter((d: any) => d.statusDisplay === 'Berjalan').length;
+    const firstName = user?.fullName?.split(' ')[0] || 'Farmer';
+    const initial = firstName[0]?.toUpperCase() || 'F';
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="min-h-screen bg-[#FAFAFA] pb-24">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4">
-                    <div className="flex items-center justify-between h-14 sm:h-16">
-                        <Link href="/" className="flex items-center gap-2">
-                            <Image 
-                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
-                                alt="Growify"
-                                width={120}
-                                height={32}
-                                className="h-7 sm:h-8 w-auto object-contain"
-                            />
-                        </Link>
-                        <div className="flex items-center gap-2 sm:gap-4">
-                            <AddDeviceDialog variant="button" />
-                            <form action={signOut}>
-                                <button 
-                                    type="submit"
-                                    className="text-gray-400 hover:text-gray-600 p-1.5 sm:p-2 rounded-xl hover:bg-gray-100 transition-colors"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                                        <polyline points="16 17 21 12 16 7"/>
-                                        <line x1="21" y1="12" x2="9" y2="12"/>
-                                    </svg>
-                                </button>
-                            </form>
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+                <div className="max-w-2xl mx-auto px-6">
+                    <div className="flex items-center justify-between h-[80px]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-sm">
+                                <span className="text-lg font-black text-primary">S</span>
+                            </div>
+                            <div className="hidden sm:block">
+                                <h2 className="text-sm font-black tracking-tight text-gray-900 leading-none">SmartMocaf</h2>
+                                <p className="text-[10px] uppercase font-black tracking-widest text-primary mt-0.5">Farmer Panel</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl text-gray-400 hover:text-primary hover:bg-primary/5 transition-all">
+                                <Bell className="h-5 w-5" />
+                            </Button>
+                            <LogoutButton />
                         </div>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
-                {/* Welcome Mobile */}
-                <div className="mb-6 sm:hidden">
-                    <p className="text-gray-500 text-sm">Selamat datang,</p>
-                    <h1 className="text-xl font-bold text-gray-900">{user?.fullName || 'Farmer'}</h1>
-                </div>
-
-                {/* Stats - Horizontal Scroll on Mobile */}
-                <div className="flex gap-4 mb-8 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 scrollbar-hide">
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 w-[140px] sm:w-auto">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-[#009e3e]/10 rounded-xl flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#009e3e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                                    <line x1="8" y1="21" x2="16" y2="21"/>
-                                    <line x1="12" y1="17" x2="12" y2="21"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-xl font-bold text-gray-900">{devicesWithData.length}</p>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Total Alat</p>
-                            </div>
+            <main className="max-w-2xl mx-auto px-6 py-10">
+                {/* Greeting */}
+                <div className="flex items-center justify-between mb-10 group">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-100/50 shadow-sm">
+                                System Ready
+                            </span>
                         </div>
+                        <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight">
+                            Halo, {firstName} <span className="inline-block hover:rotate-12 transition-transform cursor-default">👋</span>
+                        </h1>
+                        <p className="text-gray-400 mt-2 font-bold text-sm">Monitor seluruh batch fermentasi Anda secara real-time.</p>
                     </div>
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 w-[140px] sm:w-auto">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            </div>
-                            <div>
-                                <p className="text-xl font-bold text-gray-900">{onlineCount}</p>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Online</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex-shrink-0 w-[140px] sm:w-auto">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-xl font-bold text-gray-900">{runningCount}</p>
-                                <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">Proses</p>
-                            </div>
+                    <div className="hidden sm:block">
+                        <div className="w-16 h-16 rounded-[2rem] bg-white flex items-center justify-center border border-gray-100 shadow-xl shadow-gray-200/50 font-black text-xl text-primary">
+                            {initial}
                         </div>
                     </div>
                 </div>
 
-                {/* Devices */}
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-gray-900">Daftar Alat</h2>
+                {/* Quick Stats Grid */}
+                <div className="grid grid-cols-3 gap-4 mb-12">
+                    <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Total Unit</p>
+                        <h3 className="text-3xl font-black text-gray-900 leading-none">{devicesWithData.length}</h3>
+                        <div className="absolute -bottom-1 -right-1 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Cpu className="h-12 w-12" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Online</p>
+                        <h3 className="text-3xl font-black text-emerald-500 leading-none">{onlineCount}</h3>
+                        <div className="absolute -bottom-1 -right-1 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Wifi className="h-12 w-12" />
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Running</p>
+                        <h3 className="text-3xl font-black text-blue-500 leading-none">{runningCount}</h3>
+                        <div className="absolute -bottom-1 -right-1 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Activity className="h-12 w-12" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Device List Section Header */}
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-gray-900 flex items-center justify-center text-white">
+                            <LayoutDashboard className="h-4 w-4" />
+                        </div>
+                        <h2 className="text-xl font-black text-gray-900 tracking-tight">Perangkat Anda</h2>
+                        <span className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] font-black text-gray-400">
+                            {devicesWithData.length}
+                        </span>
+                    </div>
+                    <AddDeviceDialog variant="button" />
                 </div>
 
                 {devicesWithData.length === 0 ? (
-                    <div className="text-center py-12 px-6 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-                        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                                <line x1="12" y1="17" x2="12" y2="21"/>
-                            </svg>
+                    <div className="text-center py-20 px-8 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm">
+                        <div className="w-20 h-20 bg-gray-50 rounded-[2rem] flex items-center justify-center mx-auto mb-6 border border-dashed border-gray-200">
+                            <Cpu className="w-10 h-10 text-gray-200" />
                         </div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">Belum ada alat</h3>
-                        <p className="text-sm text-gray-500 mb-6">Tambahkan alat pertama Anda untuk mulai monitoring</p>
+                        <h3 className="text-xl font-black text-gray-900 tracking-tight mb-2">Belum ada perangkat</h3>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-10 leading-relaxed">
+                            Hubungkan unit fermenter SmartMocaf Anda<br/>untuk mulai mengumpulkan data.
+                        </p>
                         <AddDeviceDialog />
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-6">
                         {devicesWithData.map((device: any) => (
                             <DeviceCard
                                 key={device.id}

@@ -32,15 +32,23 @@ enum CommandStatus {
   executed
 }
 
+enum DeviceRole {
+  owner
+  viewer
+}
+
 model User {
-  id            String    @id @default(uuid())
-  fullName      String    @map("full_name")
-  username      String    @unique
-  email         String    @unique
-  passwordHash  String    @map("password_hash")
-  role          Role      @default(farmer)
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id            String         @id @default(uuid())
+  fullName      String         @map("full_name")
+  username      String         @unique
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  role          Role           @default(farmer)
+  isActive      Boolean        @default(true) @map("is_active")
+  createdAt     DateTime       @default(now()) @map("created_at")
   devices       Device[]
+  deviceUsers   DeviceUser[]
+  activities    DeviceActivity[]
 
   @@map("users")
 }
@@ -52,6 +60,7 @@ model Device {
   deviceCode        String            @unique @map("device_code")
   isOnline          Boolean           @default(false) @map("is_online")
   lastSeen          DateTime?         @map("last_seen")
+  maxUsers          Int               @default(1) @map("max_users")
   createdAt         DateTime          @default(now()) @map("created_at")
   user              User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   settings          DeviceSettings?
@@ -59,8 +68,36 @@ model Device {
   telemetry         Telemetry[]
   commands          DeviceCommand[]
   telemetryHistory  TelemetryHistory[]
+  deviceUsers       DeviceUser[]
+  activities        DeviceActivity[]
 
   @@map("devices")
+}
+
+model DeviceUser {
+  id        String     @id @default(uuid())
+  deviceId  String     @map("device_id")
+  userId    String     @map("user_id")
+  role      DeviceRole @default(viewer)
+  joinedAt  DateTime   @default(now()) @map("joined_at")
+  device    Device     @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, userId])
+  @@map("device_users")
+}
+
+model DeviceActivity {
+  id        BigInt   @id @default(autoincrement())
+  deviceId  String   @map("device_id")
+  userId    String?  @map("user_id")
+  action    String
+  detail    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("device_activities")
 }
 
 model DeviceSettings {

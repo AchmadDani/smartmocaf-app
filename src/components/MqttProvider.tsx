@@ -20,8 +20,8 @@ const MqttContext = createContext<MqttContextType>({
 export const useMqtt = () => useContext(MqttContext);
 
 const MQTT_HOST = "wss://g0d76118.ala.asia-southeast1.emqxsl.com:8084/mqtt";
-const MQTT_USER = "test";
-const MQTT_PASS = "test";
+const MQTT_USER = "smart_mocaf01";
+const MQTT_PASS = "smart_mocaf01";
 
 export const MqttProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [client, setClient] = useState<MqttClient | null>(null);

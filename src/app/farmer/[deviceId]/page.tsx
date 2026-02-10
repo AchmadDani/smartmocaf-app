@@ -11,28 +11,36 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
         redirect('/auth/login');
     }
 
-    // 1. Fetch Device & Verify Owner
-    const device = await prisma.device.findUnique({
-        where: { 
-            id: deviceId,
-            userId: session.userId
+    // 1. Fetch Device & Verify Access
+    const access = await prisma.deviceUser.findUnique({
+        where: {
+            deviceId_userId: {
+                deviceId,
+                userId: session.userId
+            }
         },
         include: {
-            settings: true,
-            fermentationRuns: {
-                orderBy: { createdAt: 'desc' },
-                take: 1
-            },
-            telemetry: {
-                orderBy: { createdAt: 'desc' },
-                take: 1
+            device: {
+                include: {
+                    settings: true,
+                    fermentationRuns: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
+                    },
+                    telemetry: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 1
+                    }
+                }
             }
         }
     });
 
-    if (!device) {
+    if (!access) {
         redirect('/farmer');
     }
+
+    const device = access.device;
 
     // 2. Settings Management (Handled by upsert/ensure exists)
     let settings = device.settings;
@@ -91,9 +99,10 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
         <DeviceDetailView
             device={device as any}
             settings={settings as any}
-            status={status}
+            status={status as any}
             telemetry={telemetry as any}
             history={history as any}
+            role={access.role}
         />
     );
 }

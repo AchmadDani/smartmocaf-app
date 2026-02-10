@@ -116,6 +116,7 @@ export default async function AdminDeviceDetailPage({ searchParams }: Props) {
                             settings={deviceSettings}
                             isOnline={device.isOnline ?? false}
                             readonly={true}
+                            role="OWNER"
                         />
                     </div>
                 </div>

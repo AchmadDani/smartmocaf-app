@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteDevice } from '@/app/actions/device';
 import { showDeleteConfirm, showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
+import { Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DeleteDeviceDialogProps {
     deviceId: string;
@@ -37,19 +39,16 @@ export default function DeleteDeviceDialog({ deviceId, deviceName }: DeleteDevic
     };
 
     return (
-        <button
+        <Button
+            variant="ghost"
+            size="icon"
             onClick={handleDelete}
             disabled={isPending}
-            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50"
+            className="h-10 w-10 rounded-xl text-gray-400 hover:text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100 transition-all group"
             aria-label="Delete device"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                <line x1="10" y1="11" x2="10" y2="17" />
-                <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-        </button>
+            <Trash2 className="h-5 w-5 transition-transform group-hover:scale-110" />
+        </Button>
     );
 }
+

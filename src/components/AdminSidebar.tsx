@@ -3,86 +3,125 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import LogoutConfirmationDialog from './LogoutConfirmationDialog';
+import LogoutButton from '@/components/LogoutButton';
+import { 
+    LayoutDashboard, 
+    Cpu, 
+    Users, 
+    LogOut, 
+    ChevronLeft, 
+    ChevronRight,
+    PanelLeftClose,
+    PanelLeftOpen
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
-export default function AdminSidebar() {
+interface AdminSidebarProps {
+    isOpen: boolean;
+    isCollapsed: boolean;
+    onClose: () => void;
+    onToggleCollapse: () => void;
+}
+
+export default function AdminSidebar({ isOpen, isCollapsed, onClose, onToggleCollapse }: AdminSidebarProps) {
     const pathname = usePathname();
 
     const navItems = [
         {
             name: 'Dashboard',
             href: '/admin',
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <rect x="3" y="3" width="7" height="9" rx="1"/>
-                    <rect x="14" y="3" width="7" height="5" rx="1"/>
-                    <rect x="14" y="12" width="7" height="9" rx="1"/>
-                    <rect x="3" y="16" width="7" height="5" rx="1"/>
-                </svg>
-            )
+            icon: LayoutDashboard
+        },
+        {
+            name: 'Perangkat',
+            href: '/admin/devices',
+            icon: Cpu
         },
         {
             name: 'Pengguna',
             href: '/admin/users',
-            icon: (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-            )
+            icon: Users
         }
     ];
 
     return (
-        <aside className="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-100 z-40 lg:flex flex-col hidden">
-            {/* Logo */}
-            <div className="p-8 border-b border-gray-50">
-                <Link href="/admin" className="flex flex-col gap-2 group">
-                    <Image 
-                        src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
-                        alt="SmartMocaf" 
-                        width={180} 
-                        height={40}
-                        className="h-auto group-hover:scale-105 transition-transform duration-500"
-                        priority
-                    />
-                    <div className="flex items-center gap-2">
-                        <span className="h-px bg-gray-100 flex-1"></span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">Admin</span>
-                        <span className="h-px bg-gray-100 flex-1"></span>
-                    </div>
-                </Link>
-            </div>
+        <>
+            {/* Overlay (mobile) */}
+            {isOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden" 
+                    onClick={onClose}
+                />
+            )}
 
-            {/* Navigation */}
-            <nav className="p-4 space-y-1">
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href || 
-                        (item.href !== '/admin' && pathname.startsWith(item.href));
-                    
-                    return (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                                isActive 
-                                    ? 'bg-[#009e3e] text-white shadow-lg shadow-[#009e3e]/20' 
-                                    : 'text-gray-600 hover:bg-gray-100'
-                            }`}
-                        >
-                            {item.icon}
-                            <span className="font-medium">{item.name}</span>
-                        </Link>
-                    );
-                })}
-            </nav>
+            {/* Sidebar */}
+            <aside className={`
+                fixed left-0 top-0 h-screen bg-white border-r border-gray-100 z-50
+                flex flex-col transition-all duration-300 ease-in-out
+                ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                ${isCollapsed ? 'lg:w-[80px]' : 'lg:w-64'}
+                w-72
+            `}>
+                {/* Logo Section */}
+                <div className={`p-6 border-b border-gray-50 h-[88px] flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+                    <Link href="/admin" className="flex items-center gap-2 group overflow-hidden" onClick={onClose}>
+                        <div className="flex-shrink-0 w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20">
+                            S
+                        </div>
+                        {!isCollapsed && (
+                            <span className="font-black text-xl tracking-tighter text-gray-900 group-hover:text-primary transition-colors whitespace-nowrap">
+                                Smart<span className="text-primary">Mocaf</span>
+                            </span>
+                        )}
+                    </Link>
+                </div>
 
-            {/* Bottom */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-100">
-                <LogoutConfirmationDialog />
-            </div>
-        </aside>
+                {/* Collapse Toggle (Desktop only) */}
+                <button 
+                    onClick={onToggleCollapse}
+                    className="absolute -right-3 top-20 w-6 h-6 bg-white border border-gray-100 rounded-full hidden lg:flex items-center justify-center text-gray-400 hover:text-primary shadow-sm hover:shadow transition-all z-10"
+                >
+                    {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+                </button>
+
+                {/* Navigation */}
+                <nav className="p-3 space-y-1.5 flex-1 mt-4">
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href || 
+                            (item.href !== '/admin' && pathname.startsWith(item.href));
+                        
+                        return (
+                            <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={onClose}
+                                title={isCollapsed ? item.name : ''}
+                                className={`flex items-center gap-3 rounded-xl transition-all h-11 ${
+                                    isCollapsed ? 'justify-center px-0' : 'px-4'
+                                } ${
+                                    isActive 
+                                        ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                                }`}
+                            >
+                                <item.icon className={`h-5 w-5 ${isActive ? '' : 'text-gray-400'}`} />
+                                {!isCollapsed && <span className="font-bold text-sm tracking-tight">{item.name}</span>}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                {/* Bottom Profile/Logout */}
+                <div className="p-3 border-t border-gray-100">
+                    <LogoutButton className={`flex items-center gap-3 rounded-xl text-gray-500 hover:bg-red-50 hover:text-red-600 transition-all font-bold text-xs h-11 ${
+                        isCollapsed ? 'justify-center px-0' : 'px-4'
+                    }`}>
+                        <LogOut className="h-4 w-4" />
+                        {!isCollapsed && <span>Keluar</span>}
+                    </LogoutButton>
+                </div>
+            </aside>
+        </>
     );
 }
+

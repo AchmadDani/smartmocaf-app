@@ -3,8 +3,9 @@
 import { signInWithUsername } from '@/app/actions/auth';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
 
 interface AuthFormProps {
@@ -13,6 +14,17 @@ interface AuthFormProps {
 
 export default function AuthForm({ mode }: AuthFormProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const message = searchParams.get('message');
+        if (message === 'logout_success') {
+            showSuccess('Berhasil Keluar', 'Sampai jumpa kembali!');
+            // Clear the param from URL without reload
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
+    }, [searchParams]);
 
     // Login fields
     const [username, setUsername] = useState('');

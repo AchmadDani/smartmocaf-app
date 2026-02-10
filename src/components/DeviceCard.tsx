@@ -1,6 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { 
+    Thermometer, 
+    Droplets, 
+    Waves, 
+    ChevronRight, 
+    Cpu,
+    ArrowUpRight
+} from 'lucide-react';
 
 interface DeviceCardProps {
     id: string;
@@ -29,89 +37,84 @@ export default function DeviceCard({
 }: DeviceCardProps) {
     return (
         <Link href={href} className="block group">
-            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100/80 hover:shadow-2xl hover:shadow-[#009e3e]/10 hover:border-[#009e3e]/20 transition-all duration-500 relative overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] p-7 shadow-sm border border-gray-100/80 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 transition-all duration-500 relative overflow-hidden">
                 {/* Decorative background element */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#009e3e]/5 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/5 to-transparent rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-700" />
 
                 {/* Header */}
-                <div className="flex items-center justify-between mb-6 relative">
-                    <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between mb-8 relative">
+                    <div className="flex items-center gap-5">
                         <div className="relative">
-                            <div className={`w-3.5 h-3.5 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.8)]' : 'bg-gray-300'} transition-all duration-500`} />
-                            {isOnline && <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-25" />}
+                            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 shadow-sm ${
+                                isOnline ? 'bg-emerald-50 text-emerald-600 ring-4 ring-emerald-50/50' : 'bg-gray-100 text-gray-400'
+                            }`}>
+                                <Cpu className="h-7 w-7" />
+                            </div>
+                            <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${isOnline ? 'bg-emerald-500' : 'bg-gray-300'}`} />
                         </div>
                         <div>
-                            <h3 className="font-extrabold text-gray-900 group-hover:text-[#009e3e] transition-colors leading-tight text-lg">{name}</h3>
+                            <h3 className="font-black text-gray-900 group-hover:text-primary transition-colors leading-tight text-xl tracking-tight">{name}</h3>
                             {deviceCode && (
-                                <p className="text-[10px] font-mono text-gray-400 font-bold tracking-widest uppercase mt-0.5">{deviceCode}</p>
+                                <p className="text-[10px] font-mono text-gray-400 font-bold tracking-[0.2em] uppercase mt-1">{deviceCode}</p>
                             )}
                         </div>
                     </div>
-                    <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${statusColor}`}>
+                    <span className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border-0 shadow-sm transition-all group-hover:shadow-md ${statusColor}`}>
                         {statusDisplay}
                     </span>
                 </div>
 
                 {/* Sensor Data Bento Grid */}
-                <div className="grid grid-cols-1 gap-3 relative">
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-gradient-to-br from-orange-50/50 to-amber-50/50 p-4 rounded-[1.25rem] border border-orange-100/50 group-hover:border-orange-200 transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-orange-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                        <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/>
-                                    </svg>
-                                </div>
-                                <span className="text-[10px] font-bold text-orange-600/70 uppercase tracking-wider">Suhu</span>
+                <div className="grid grid-cols-2 gap-4 relative">
+                    <div className="bg-gradient-to-br from-orange-50/40 to-amber-50/40 p-5 rounded-[1.75rem] border border-orange-100/30 group-hover:border-orange-200 transition-colors">
+                        <div className="flex items-center gap-2.5 mb-3">
+                            <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                                <Thermometer className="w-5 h-5 text-orange-600" />
                             </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-gray-900 leading-none">
-                                    {typeof temp === 'number' ? temp.toFixed(1) : temp}
-                                </span>
-                                <span className="text-sm font-bold text-gray-400">°C</span>
-                            </div>
+                            <span className="text-[10px] font-black text-orange-600/70 uppercase tracking-widest">Suhu</span>
                         </div>
-
-                        <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/50 p-4 rounded-[1.25rem] border border-blue-100/50 group-hover:border-blue-200 transition-colors">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                        <path d="M12 2.69l5.74 5.74a8 8 0 1 1-11.48 0L12 2.69z"/>
-                                    </svg>
-                                </div>
-                                <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-wider">Keasaman</span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-black text-gray-900 leading-none">
-                                    {typeof ph === 'number' ? ph.toFixed(2) : ph}
-                                </span>
-                                <span className="text-[10px] font-black text-blue-400 ml-1">pH</span>
-                            </div>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-3xl font-black text-gray-900 leading-none">
+                                {typeof temp === 'number' ? temp.toFixed(1) : temp}
+                            </span>
+                            <span className="text-xs font-black text-gray-400 uppercase">°C</span>
                         </div>
                     </div>
 
-                    <div className="bg-gradient-to-br from-[#009e3e]/5 to-[#00c853]/10 p-4 rounded-[1.25rem] border border-[#009e3e]/10 group-hover:border-[#009e3e]/30 transition-colors flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#009e3e]/10 flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-[#009e3e]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <path d="M12 2.69l5.74 5.74a8 8 0 1 1-11.48 0L12 2.69z"/>
-                                </svg>
+                    <div className="bg-gradient-to-br from-blue-50/40 to-indigo-50/40 p-5 rounded-[1.75rem] border border-blue-100/30 group-hover:border-blue-200 transition-colors">
+                        <div className="flex items-center gap-2.5 mb-3">
+                            <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                                <Droplets className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <span className="text-[10px] font-black text-blue-600/70 uppercase tracking-widest">Keasaman</span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-3xl font-black text-gray-900 leading-none">
+                                {typeof ph === 'number' ? ph.toFixed(2) : ph}
+                            </span>
+                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-tight">pH</span>
+                        </div>
+                    </div>
+
+                    <div className="col-span-2 bg-gradient-to-r from-emerald-50/40 to-primary/5 p-5 rounded-[1.75rem] border border-primary/10 group-hover:border-primary/20 transition-colors flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                                <Waves className="w-6 h-6 text-primary" />
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-[#009e3e] uppercase tracking-wider block mb-0.5">Level Air</span>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-xl font-black text-gray-900 leading-none">
+                                <span className="text-[10px] font-black text-primary uppercase tracking-widest block mb-1">Level Air</span>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-2xl font-black text-gray-900 leading-none">
                                         {typeof waterLevel === 'number' ? waterLevel : waterLevel || '--'}
                                     </span>
-                                    <span className="text-xs font-bold text-[#009e3e]/60">%</span>
+                                    <span className="text-[10px] font-black text-primary uppercase">% Kapasitas</span>
                                 </div>
                             </div>
                         </div>
                         
-                        {/* Progress micro-indicator */}
-                        <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="w-24 h-2 bg-gray-100/50 rounded-full overflow-hidden border border-gray-100 p-0.5">
                             <div 
-                                className="h-full bg-gradient-to-r from-[#009e3e] to-[#00c853] transition-all duration-1000" 
+                                className="h-full bg-gradient-to-r from-primary to-emerald-400 rounded-full transition-all duration-1000 shadow-sm" 
                                 style={{ width: `${typeof waterLevel === 'number' ? waterLevel : 0}%` }}
                             />
                         </div>
@@ -119,21 +122,20 @@ export default function DeviceCard({
                 </div>
 
                 {/* Footer */}
-                <div className="mt-6 pt-5 border-t border-gray-50 flex items-center justify-between relative group/btn">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-300'}`} />
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isOnline ? 'text-green-600' : 'text-gray-400'}`}>
-                            {isOnline ? 'Sistem Aktif' : 'Terputus'}
+                <div className="mt-8 pt-6 border-t border-gray-50 flex items-center justify-between relative group/btn">
+                    <div className="flex items-center gap-3">
+                        <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-gray-300'}`} />
+                        <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isOnline ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            {isOnline ? 'Sistem Terkoneksi' : 'Koneksi Terputus'}
                         </span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#009e3e] opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300">
-                        Detail
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                            <polyline points="9 18 15 12 9 6"/>
-                        </svg>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary opacity-30 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0 transition-all duration-500 ease-out">
+                        Lihat Monitoring 
+                        <ArrowUpRight className="w-4 h-4 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                 </div>
             </div>
         </Link>
     );
 }
+

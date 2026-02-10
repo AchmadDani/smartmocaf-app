@@ -13,44 +13,85 @@ async function getUserId() {
     return session.userId;
 }
 
+// Helper to check if user has access to device
+async function checkDeviceAccess(deviceId: string, requiredRole: 'owner' | 'viewer' = 'viewer') {
+    const userId = await getUserId();
+    
+    // Admin has access to all
+    const userProfile = await prisma.user.findUnique({ 
+        where: { id: userId },
+        select: { role: true }
+    });
+    
+    if (userProfile?.role === 'admin') return userId;
+
+    const access = await prisma.deviceUser.findUnique({
+        where: { deviceId_userId: { deviceId, userId } }
+    });
+
+    if (!access) throw new Error('Unauthorized or device not found');
+    
+    if (requiredRole === 'owner' && access.role !== 'owner') {
+        throw new Error('Hanya pemilik yang dapat melakukan aksi ini');
+    }
+
+    return userId;
+}
+
 export async function createDevice(name: string, deviceCode: string) {
     const userId = await getUserId();
 
-    // Check if device already exists (auto-discovered) but unowned
+    // Find device registered by admin
     const existingDevice = await prisma.device.findUnique({
-        where: { deviceCode }
+        where: { deviceCode },
+        include: { 
+            _count: { select: { deviceUsers: true } }
+        }
     });
 
-    if (existingDevice) {
-        if (existingDevice.userId && existingDevice.userId !== userId) {
-            throw new Error('Alat ini sudah dimiliki oleh pengguna lain.');
-        }
-
-        // Claim existing device
-        await prisma.device.update({
-            where: { id: existingDevice.id },
-            data: {
-                userId,
-                name
-            }
-        });
-
-        revalidatePath('/farmer');
-        return { id: existingDevice.id };
+    if (!existingDevice) {
+        throw new Error('Perangkat tidak ditemukan');
     }
 
-    // Otherwise create new
-    const newDevice = await prisma.device.create({
+    // Check if user already has access
+    const existingAccess = await prisma.deviceUser.findUnique({
+        where: { deviceId_userId: { deviceId: existingDevice.id, userId } }
+    });
+
+    if (existingAccess) {
+        throw new Error('Anda sudah memiliki akses ke perangkat ini.');
+    }
+
+    // Check limit
+    if (existingDevice._count.deviceUsers >= existingDevice.maxUsers) {
+        throw new Error('Batas pengguna untuk perangkat ini sudah penuh. Silakan hubungi admin.');
+    }
+
+    // Add user as owner (if first user) or viewer
+    const role = existingDevice._count.deviceUsers === 0 ? 'owner' : 'viewer';
+
+    await prisma.deviceUser.create({
         data: {
-            name,
-            deviceCode,
-            userId
+            deviceId: existingDevice.id,
+            userId,
+            role
+        }
+    });
+
+    // Log activity
+    await prisma.deviceActivity.create({
+        data: {
+            deviceId: existingDevice.id,
+            userId,
+            action: 'DEVICE_CLAIMED',
+            detail: { role }
         }
     });
 
     revalidatePath('/farmer');
-    revalidatePath('/admin');
-    return { id: newDevice.id };
+    revalidatePath('/admin/devices');
+    revalidatePath(`/admin/devices/${existingDevice.id}`);
+    return { id: existingDevice.id };
 }
 
 export async function createDeviceCommand(
@@ -59,17 +100,7 @@ export async function createDeviceCommand(
     payload: any,
     runId: string | null = null
 ) {
-    const userId = await getUserId();
-
-    // Verify ownership
-    const device = await prisma.device.findUnique({
-        where: {
-            id: deviceId,
-            userId: userId
-        }
-    });
-
-    if (!device) throw new Error('Unauthorized or device not found');
+    const userId = await checkDeviceAccess(deviceId, 'owner');
 
     await prisma.deviceCommand.create({
         data: {
@@ -82,7 +113,7 @@ export async function createDeviceCommand(
 }
 
 export async function updateDeviceSettings(deviceId: string, settings: { target_ph?: number; auto_drain_enabled?: boolean }) {
-    await getUserId(); // ensure auth
+    const userId = await checkDeviceAccess(deviceId, 'owner');
 
     const currentSettings = await prisma.deviceSettings.upsert({
         where: { deviceId },
@@ -94,6 +125,16 @@ export async function updateDeviceSettings(deviceId: string, settings: { target_
             deviceId,
             targetPh: settings.target_ph ?? 4.5,
             autoDrainEnabled: settings.auto_drain_enabled ?? false
+        }
+    });
+
+    // Log activity
+    await prisma.deviceActivity.create({
+        data: {
+            deviceId,
+            userId,
+            action: 'SETTINGS_UPDATE',
+            detail: settings
         }
     });
 
@@ -110,10 +151,11 @@ export async function updateDeviceSettings(deviceId: string, settings: { target_
     });
 
     revalidatePath(`/farmer/${deviceId}`);
+    revalidatePath(`/admin/devices/${deviceId}`);
 }
 
 export async function manualDrainToggle(deviceId: string, open: boolean) {
-    await getUserId();
+    const userId = await checkDeviceAccess(deviceId, 'owner');
 
     // Check if running
     const runningRun = await prisma.fermentationRun.findFirst({
@@ -129,7 +171,17 @@ export async function manualDrainToggle(deviceId: string, open: boolean) {
         data: { autoDrainEnabled: open }
     });
 
-    // 2. Create Command with source tag
+    // 2. Log activity
+    await prisma.deviceActivity.create({
+        data: {
+            deviceId,
+            userId,
+            action: open ? 'DRAIN_OPEN' : 'DRAIN_CLOSE',
+            detail: { source: 'manual' }
+        }
+    });
+
+    // 3. Create Command with source tag
     const source = runningRun ? 'manual_override' : 'manual';
     await createDeviceCommand(
         deviceId, 
@@ -142,7 +194,7 @@ export async function manualDrainToggle(deviceId: string, open: boolean) {
 }
 
 export async function startFermentation(deviceId: string, mode: 'auto' | 'manual' = 'auto') {
-    const userId = await getUserId();
+    const userId = await checkDeviceAccess(deviceId, 'owner');
 
     // Get current target_ph from settings
     const settings = await prisma.deviceSettings.findUnique({
@@ -150,19 +202,22 @@ export async function startFermentation(deviceId: string, mode: 'auto' | 'manual
     });
     const targetPh = settings?.targetPh ?? 4.5;
 
-    // Get current water level
-    const latestTelemetry = await prisma.telemetry.findFirst({
-        where: { deviceId },
-        orderBy: { createdAt: 'desc' }
-    });
-    const waterLevel = latestTelemetry?.waterLevel || null;
-
     const newRun = await prisma.fermentationRun.create({
         data: {
             deviceId,
             status: 'running',
             mode: mode as any,
             startedAt: new Date()
+        }
+    });
+
+    // Log activity
+    await prisma.deviceActivity.create({
+        data: {
+            deviceId,
+            userId,
+            action: 'START_FERMENTATION',
+            detail: { mode, targetPh, runId: newRun.id }
         }
     });
 
@@ -183,7 +238,7 @@ export async function startFermentation(deviceId: string, mode: 'auto' | 'manual
 }
 
 export async function stopFermentation(deviceId: string) {
-    await getUserId();
+    const userId = await checkDeviceAccess(deviceId, 'owner');
 
     const latestRun = await prisma.fermentationRun.findFirst({
         where: {
@@ -202,6 +257,16 @@ export async function stopFermentation(deviceId: string) {
             }
         });
 
+        // Log activity
+        await prisma.deviceActivity.create({
+            data: {
+                deviceId,
+                userId,
+                action: 'STOP_FERMENTATION',
+                detail: { runId: latestRun.id }
+            }
+        });
+
         // Create RUN_STOP command
         await createDeviceCommand(deviceId, 'RUN_STOP', { reason: 'user_stop' }, latestRun.id);
     }
@@ -211,7 +276,7 @@ export async function stopFermentation(deviceId: string) {
 }
 
 export async function simulateTelemetry(deviceId: string) {
-    await getUserId();
+    await checkDeviceAccess(deviceId, 'owner');
 
     const latestRun = await prisma.fermentationRun.findFirst({
         where: {
@@ -236,7 +301,6 @@ export async function simulateTelemetry(deviceId: string) {
     });
 
     revalidatePath(`/farmer/${deviceId}`);
-    revalidatePath('/farmer');
 }
 
 export async function getRunTimeline(runId: string) {
@@ -268,23 +332,17 @@ export async function getRunTimeline(runId: string) {
 }
 
 export async function deleteDevice(deviceId: string) {
+    // Only admin usually deletes devices via admin actions, 
+    // but if we allow farmers to "un-claim", it's different.
+    // Farmer delete device = remove their own DeviceUser entry.
     const userId = await getUserId();
 
-    // Verify ownership
-    const device = await prisma.device.findUnique({
+    await prisma.deviceUser.delete({
         where: {
-            id: deviceId,
-            userId: userId
+            deviceId_userId: { deviceId, userId }
         }
-    });
-
-    if (!device) {
-        throw new Error('Device not found or unauthorized');
-    }
-
-    await prisma.device.delete({
-        where: { id: deviceId }
     });
 
     revalidatePath('/farmer');
 }
+

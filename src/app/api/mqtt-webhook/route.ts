@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
                 runId: activeRun?.id || null,
                 tempC: payload.temp,
                 ph: payload.ph,
-                waterLevel: payload.water_level
+                waterLevel: Math.round(payload.water_level || 0)
             }
         });
 

@@ -4,8 +4,8 @@ import Image from 'next/image';
 
 export default function AuthFooter() {
     return (
-        <footer className="fixed bottom-0 left-0 right-0 z-50 px-6 py-8 pointer-events-none">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4 pointer-events-auto">
+        <footer className="w-full px-6 py-8 mt-auto">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex items-center gap-4">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">
                         © 2026 Growify Tech

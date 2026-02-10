@@ -47,7 +47,12 @@ export async function signInWithUsername(prevState: any, formData: FormData) {
         return { error: 'Username atau Password salah.' };
     }
 
-    // 3. Create session
+    // 3. Check if account is active (explicit false check for safety)
+    if (user.isActive === false) {
+        return { error: 'Akun Anda dinonaktifkan. Silakan hubungi admin untuk informasi lebih lanjut.' };
+    }
+
+    // 4. Create session
     await createSession(user.id, user.role);
 
     const redirectUrl = user.role === 'admin' ? '/admin' : '/farmer';
