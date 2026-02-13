@@ -40,14 +40,23 @@ import { Badge } from "@/components/ui/badge";
 interface MonitoringPanelProps {
     deviceId: string;
     deviceCode?: string;
-    telemetry: { ph: number; temp_c: number; water_level?: number } | null;
+    telemetry: { 
+        ph: number; 
+        temp_c: number; 
+        water_level?: number; 
+        relay?: number;
+        mode?: string; // Added
+        status?: string; // Added
+        uptime_s?: number; // Added
+        stable_time_s?: number; // Added
+    } | null;
     status: 'idle' | 'running' | 'done';
     settings: {
         target_ph: number;
         auto_drain_enabled: boolean;
     };
     role: 'OWNER' | 'VIEWER';
-    mode?: 'auto' | 'manual';
+    mode?: 'auto' | 'manual' | 'test' | 'TEST'; // Updated type
     isOnline?: boolean;
     readonly?: boolean;
 }
@@ -77,7 +86,12 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             setLiveTelemetry({
                 ph: data.ph ?? liveTelemetry?.ph,
                 temp_c: data.temp ?? liveTelemetry?.temp_c,
-                water_level: data.water_level ?? liveTelemetry?.water_level
+                water_level: data.water_level ?? liveTelemetry?.water_level,
+                relay: data.relay ?? liveTelemetry?.relay,
+                mode: data.mode ?? liveTelemetry?.mode,
+                status: data.status ?? liveTelemetry?.status,
+                uptime_s: data.uptime_s ?? liveTelemetry?.uptime_s,
+                stable_time_s: data.stable_time_s ?? liveTelemetry?.stable_time_s,
             });
             if (data.mode) setLiveMode(data.mode);
             setIsDeviceOnline(true);
@@ -150,7 +164,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
         }
     };
 
-    const handleModeToggle = async (newMode: 'auto' | 'manual') => {
+    const handleModeToggle = async (newMode: 'auto' | 'manual' | 'test' | 'TEST') => {
         const result = await showConfirm(
             `Mode ${newMode === 'auto' ? 'Otomatis' : 'Manual'}?`,
             newMode === 'auto'
@@ -265,6 +279,31 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                             {liveMode === 'auto' ? <Zap className="h-3 w-3 mr-2" /> : <Settings2 className="h-3 w-3 mr-2" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{liveMode === 'auto' ? 'Mode Otomatis' : 'Mode Manual'}</span>
                         </Badge>
+                        
+                        {/* Test Mode Button */}
+                        {!readonly && role === 'OWNER' && (
+                            <Badge 
+                                variant="outline"
+                                className={`ml-2 px-3 py-2 rounded-2xl border-0 shadow-lg h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 ${liveMode === 'TEST' ? 'bg-purple-500 text-white shadow-purple-500/20' : 'bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-600'}`}
+                                onClick={async () => {
+                                    const result = await showConfirm(
+                                        'Aktifkan Mode Test?',
+                                        'Mode ini akan membuka keran selama 15 detik JIKA pH < Target. Gunakan untuk simulasi drain.',
+                                        'Ya, Test Drain'
+                                    );
+                                    if (result) {
+                                        setLiveMode('TEST');
+                                        if (client) {
+                                            client.publish(`growify/${mqttDeviceId}/mode`, JSON.stringify({ mode: 'test' }));
+                                        }
+                                        showSuccess('Mode Test Aktif', 'Menunggu kondisi pH...');
+                                    }
+                                }}
+                            >
+                                <Cpu className="h-3 w-3 mr-1" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Test</span>
+                            </Badge>
+                        )}
                     </div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
                         {liveMode === 'auto' ? 'Sistem akan membuka keran otomatis saat target pH tercapai.' : 'Peringatan: Pembuangan air kini dikontrol secara manual oleh anda.'}
@@ -272,14 +311,42 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 </div>
                 <div className="p-8 flex items-center justify-between">
                     <div className="flex items-center gap-4">
+                        {/* Uptime Badge */}
+                        <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm px-3 py-1 rounded-full border border-gray-100/50 shadow-sm">
+                            <Activity className="w-3 h-3 text-gray-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-gray-600 tracking-wide">
+                                {liveTelemetry?.uptime_s ? `${Math.floor(liveTelemetry.uptime_s / 3600)}h ${Math.floor((liveTelemetry.uptime_s % 3600) / 60)}m` : "Offline"}
+                            </span>
+                        </div>
+                        {/* Status Badge */}
+                        <div className={`flex items-center gap-1 px-3 py-1 rounded-full border shadow-sm ${
+                            liveTelemetry?.status === 'FERMENT' ? 'bg-blue-100 border-blue-200 text-blue-700' :
+                            liveTelemetry?.status === 'STABLE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700' :
+                            liveTelemetry?.status === 'DRAIN' ? 'bg-red-100 border-red-200 text-red-700' :
+                            'bg-gray-100 border-gray-200 text-gray-600'
+                        }`}>
+                            <span className="text-[10px] font-black uppercase tracking-wider">
+                                {liveTelemetry?.status === 'FERMENT' ? 'FERMENTASI' :
+                                 liveTelemetry?.status === 'STABLE' ? 'STABILISASI' :
+                                 liveTelemetry?.status === 'DRAIN' ? 'KURAS' : 'IDLE'}
+                            </span>
+                        </div>
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
                             <Droplets className="h-7 w-7" />
                         </div>
                         <div>
-                            <span className={`text-base font-black block leading-tight ${settings.auto_drain_enabled ? 'text-blue-600' : 'text-gray-900'}`}>
-                                {settings.auto_drain_enabled ? 'Keran Terbuka' : 'Keran Tertutup'}
+                            <span className={`text-base font-black block leading-tight ${settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'text-blue-600' : 'text-gray-900'}`}>
+                                {settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'Keran Terbuka' : 'Keran Tertutup'}
                             </span>
-                            {liveMode === 'manual' ? (
+                            {liveTelemetry?.relay === 1 ? (
+                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1 flex items-center gap-1">
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                    </span>
+                                    Sedang Menguras...
+                                </span>
+                            ) : liveMode === 'manual' ? (
                                 <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1 block">Kontrol Manual Aktif</span>
                             ) : status === 'idle' ? (
                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Terkunci (Otomatis)</span>
@@ -330,82 +397,147 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 </div>
             </div>
 
-            {/* Bottom Primary Action */}
-            {!readonly && role === 'OWNER' && (
-                <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white/100 to-transparent z-40">
-                    <div className="max-w-2xl mx-auto px-4">
-                        {status === 'running' ? (
-                            <Button
-                                size="lg"
-                                variant="destructive"
-                                className="w-full h-20 rounded-[2rem] font-black text-lg shadow-[0_15px_40px_rgba(220,38,38,0.3)] gap-4 active:scale-[0.98] transition-all border-none bg-red-600 hover:bg-red-700 group/btn"
-                                onClick={handleStop}
-                                disabled={isPending}
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
-                                    <Square className="fill-white h-5 w-5" />
-                                </div>
-                                <span className="uppercase tracking-widest">{isPending ? 'Selesaikan...' : 'Selesaikan Batch'}</span>
-                            </Button>
-                        ) : (
-                            <Button
-                                size="lg"
-                                className="w-full h-20 rounded-[2rem] font-black text-lg shadow-[0_15px_40px_rgba(17,24,39,0.2)] gap-4 active:scale-[0.98] transition-all border-none bg-gray-900 hover:bg-black group/btn"
-                                onClick={handleStart}
-                                disabled={isPending}
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center group-hover/btn:scale-110 transition-transform">
-                                    <Play className="fill-white h-5 w-5" />
-                                </div>
-                                <span className="uppercase tracking-widest">{isPending ? 'Memproses...' : 'Mulai Batch Baru'}</span>
-                            </Button>
-                        )}
+            {/* FERMENTATION CONTROL */}
+            <div className="grid grid-cols-2 gap-4 mt-6">
+                <Button 
+                    onClick={() => {
+                        if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "3" }));
+                    }}
+                    disabled={liveTelemetry?.status !== 'IDLE'}
+                    className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
+                        liveTelemetry?.status !== 'IDLE' ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30'
+                    }`}
+                >
+                    Mulai Fermentasi
+                </Button>
+                <Button 
+                    onClick={() => {
+                        if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "4" }));
+                    }}
+                    disabled={liveTelemetry?.status === 'IDLE'}
+                    className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
+                        liveTelemetry?.status === 'IDLE' ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30'
+                    }`}
+                >
+                    Stop Proses
+                </Button>
+            </div>
+
+            {/* Manual Control (Only in Manual Mode) */}
+            {liveTelemetry?.mode === 'manual' && (
+                <div className="mt-6 pt-6 border-t border-gray-100">
+                    <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-3 uppercase tracking-widest">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                            <Settings2 className="h-4 w-4 text-amber-500" />
+                        </div>
+                        Kontrol Manual
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Button 
+                            onClick={() => {
+                                if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "1" }));
+                            }}
+                            disabled={liveTelemetry?.relay === 1}
+                            className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
+                                liveTelemetry?.relay === 1 ? 'bg-blue-100 text-blue-400' : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-blue-500/30'
+                            }`}
+                        >
+                            Buka Keran
+                        </Button>
+                        <Button 
+                            onClick={() => {
+                                if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "0" }));
+                            }}
+                            disabled={liveTelemetry?.relay === 0}
+                            className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
+                                liveTelemetry?.relay === 0 ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30'
+                            }`}
+                        >
+                            Tutup Keran
+                        </Button>
                     </div>
                 </div>
             )}
+
+            {/* Bottom Primary Action */}
+            {/* Removed as per instruction */}
 
             {/* pH Settings Dialog */}
             <Dialog open={showPhDialog} onOpenChange={setShowPhDialog}>
                 <DialogContent className="sm:max-w-xs rounded-[2.5rem] p-8 border-none overflow-hidden">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16" />
                     <DialogHeader className="relative">
-                        <DialogTitle className="text-2xl font-black tracking-tight">Target pH</DialogTitle>
+                        <DialogTitle className="text-2xl font-black tracking-tight">Konfigurasi</DialogTitle>
                         <DialogDescription className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                            Threshold Otomatisasi
+                            Parameter Sistem
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={(e) => {
                         e.preventDefault();
                         const formData = new FormData(e.currentTarget);
-                        const val = parseFloat(formData.get('ph') as string);
-                        if (!isNaN(val)) {
-                            startTransition(async () => {
-                                try {
-                                    await updateDeviceSettings(deviceId, { target_ph: val });
-                                    showSuccess('Diperbarui', `Target pH: ${val}`);
-                                } catch (error) {
-                                    showError('Gagal', 'Terjadi kesalahan.');
+                        const phVal = parseFloat(formData.get('ph') as string);
+                        const heightVal = parseFloat(formData.get('height') as string);
+                        const chatIdVal = formData.get('chat_id') as string;
+                        
+                        startTransition(async () => {
+                            try {
+                                const payload: any = {};
+                                if (!isNaN(phVal)) payload.target_ph = phVal;
+                                if (!isNaN(heightVal)) payload.max_height = heightVal;
+                                if (chatIdVal && chatIdVal.trim() !== "") payload.telegram_chat_id = chatIdVal;
+
+                                await updateDeviceSettings(deviceId, payload);
+                                if (client) {
+                                    client.publish(`growify/${mqttDeviceId}/config`, JSON.stringify(payload));
                                 }
-                            });
-                        }
+                                showSuccess('Diperbarui', 'Konfigurasi tersimpan.');
+                            } catch (error) {
+                                showError('Gagal', 'Terjadi kesalahan.');
+                            }
+                        });
                         setShowPhDialog(false);
                     }} className="relative">
-                        <div className="py-8">
+                        <div className="py-6 space-y-6">
                             <div className="relative group">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block pl-1">Target pH</Label>
+                                <div className="relative">
+                                    <Input 
+                                        name="ph"
+                                        type="number" 
+                                        step="0.01" 
+                                        defaultValue={settings.target_ph}
+                                        className="h-16 text-center text-3xl font-black rounded-2xl border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all pr-12" 
+                                    />
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 font-black text-sm">pH</div>
+                                </div>
+                            </div>
+
+                            <div className="relative group">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block pl-1">Tinggi Tangki (cm)</Label>
+                                <div className="relative">
+                                    <Input 
+                                        name="height"
+                                        type="number" 
+                                        step="1" 
+                                        placeholder="50"
+                                        className="h-16 text-center text-3xl font-black rounded-2xl border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all pr-12" 
+                                    />
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 font-black text-sm">CM</div>
+                                </div>
+                            </div>
+                            <div className="relative group">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block pl-1">Telegram Chat ID</Label>
                                 <Input 
-                                    name="ph"
-                                    type="number" 
-                                    step="0.01" 
-                                    defaultValue={settings.target_ph}
-                                    className="h-24 text-center text-5xl font-black rounded-[2rem] border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all pr-12" 
-                                    autoFocus
+                                    name="chat_id"
+                                    type="text" 
+                                    placeholder="-45345..."
+                                    className="h-16 text-center text-sm font-bold rounded-2xl border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all" 
                                 />
-                                <div className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300 font-black text-xl">pH</div>
                             </div>
                         </div>
                         <DialogFooter className="sm:justify-start">
-                            <Button type="submit" className="w-full h-16 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-primary/20">
-                                Simpan Perubahan
+                            <Button type="submit" className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
+                                Simpan Konfigurasi
                             </Button>
                         </DialogFooter>
                     </form>

@@ -78,14 +78,14 @@ export async function POST(request: NextRequest) {
         // 1. Only log to DB if fermentation is active (activeRun exists)
         // 2. Log exactly once every 30 minutes to keep history tidy
         if (activeRun) {
-            const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
             const lastTelemetry = await prisma.telemetry.findFirst({
                 where: { runId: activeRun.id },
                 orderBy: { createdAt: 'desc' }
             });
 
-            // Save if first record for batch OR last record is older than 30 mins
-            if (!lastTelemetry || lastTelemetry.createdAt < thirtyMinutesAgo) {
+            // Save if first record for batch OR last record is older than 15 mins
+            if (!lastTelemetry || lastTelemetry.createdAt < fifteenMinutesAgo) {
                 await prisma.telemetry.create({
                     data: {
                         deviceId: device.id,
