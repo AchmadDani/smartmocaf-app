@@ -58,6 +58,7 @@ model Device {
   userId            String?           @map("user_id")
   name              String
   deviceCode        String            @unique @map("device_code")
+  ownerCode         String?           @unique @map("owner_code")
   isOnline          Boolean           @default(false) @map("is_online")
   lastSeen          DateTime?         @map("last_seen")
   maxUsers          Int               @default(1) @map("max_users")
@@ -113,15 +114,17 @@ model DeviceSettings {
 }
 
 model FermentationRun {
-  id        String      @id @default(uuid())
-  deviceId  String      @map("device_id")
-  status    RunStatus   @default(idle)
-  mode      RunMode     @default(auto)
-  startedAt DateTime?   @map("started_at")
-  endedAt   DateTime?   @map("ended_at")
-  createdAt DateTime    @default(now()) @map("created_at")
-  device    Device      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
-  telemetry Telemetry[]
+  id            String      @id @default(uuid())
+  deviceId      String      @map("device_id")
+  name          String?     @default("Fermentasi Baru")
+  cassavaAmount Float?      @map("cassava_amount")
+  status        RunStatus   @default(idle)
+  mode          RunMode     @default(auto)
+  startedAt     DateTime?   @map("started_at")
+  endedAt       DateTime?   @map("ended_at")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  device        Device      @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  telemetry     Telemetry[]
 
   @@map("fermentation_runs")
 }

@@ -101,19 +101,43 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
     }, [lastMessages, mqttDeviceId]);
 
     const handleStart = async () => {
-        const result = await showConfirm(
-            'Mulai Fermentasi?',
-            'Proses fermentasi akan dimulai. Pastikan singkong sudah siap dalam tangki.',
-            'Ya, Mulai'
-        );
+        // Show custom dialog for fermentation details
+        const { value: formValues } = await import('sweetalert2').then(Swal => {
+            return Swal.default.fire({
+                title: 'Mulai Fermentasi',
+                html: `
+                    <div class="text-left space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nama Fermentasi</label>
+                            <input id="fermentation-name" type="text" class="swal2-input" placeholder="Contoh: Batch Mocaf #1" value="">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Jumlah Singkong (KG)</label>
+                            <input id="cassava-amount" type="number" class="swal2-input" placeholder="Contoh: 50" min="1">
+                        </div>
+                    </div>
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Mulai Fermentasi',
+                cancelButtonText: 'Batal',
+                confirmButtonColor: '#009e3e',
+                preConfirm: () => {
+                    const name = (document.getElementById('fermentation-name') as HTMLInputElement).value;
+                    const amount = (document.getElementById('cassava-amount') as HTMLInputElement).value;
+                    return { name, amount: amount ? parseFloat(amount) : null };
+                }
+            });
+        });
         
-        if (result.isConfirmed) {
+        if (formValues) {
+            const mode = (liveMode === 'manual' || liveMode === 'MANUAL') ? 'manual' : 'auto';
             startTransition(async () => {
                 showLoading('Memulai fermentasi...');
                 try {
-                    await startFermentation(deviceId);
+                    await startFermentation(deviceId, mode, formValues.name || undefined, formValues.amount || undefined);
                     closeSwal();
-                    showSuccess('Fermentasi Dimulai', 'Proses monitoring telah aktif.');
+                    showSuccess('Fermentasi Dimulai', `Proses monitoring telah aktif untuk ${formValues.name || 'fermentasi baru'}.`);
                 } catch (error) {
                     closeSwal();
                     showError('Gagal Memulai', 'Terjadi kesalahan saat memulai fermentasi.');
@@ -167,6 +191,12 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
     };
 
     const handleModeToggle = async (newMode: 'auto' | 'manual' | 'test' | 'TEST') => {
+        // For farmer, only allow auto or manual (no test mode)
+        if (newMode === 'test' || newMode === 'TEST') {
+            showError('Mode Tidak Tersedia', 'Mode Test hanya tersedia untuk administrator.');
+            return;
+        }
+        
         const result = await showConfirm(
             `Mode ${newMode === 'auto' ? 'Otomatis' : 'Manual'}?`,
             newMode === 'auto'
@@ -185,48 +215,48 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
             {/* Bento Grid Sensors */}
-            <div className="grid grid-cols-2 gap-5">
-                <div className="bg-gradient-to-br from-orange-50/40 to-amber-50/40 p-6 rounded-[2rem] border border-orange-100/30 group hover:border-orange-200 transition-all shadow-sm">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                            <Thermometer className="w-5 h-5 text-orange-600" />
+            <div className="grid grid-cols-2 gap-3 sm:gap-5">
+                <div className="bg-gradient-to-br from-orange-50/40 to-amber-50/40 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-orange-100/30 group hover:border-orange-200 transition-all shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                            <Thermometer className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
                         </div>
                         <span className="text-[10px] font-black text-orange-600/70 uppercase tracking-widest">Suhu</span>
                     </div>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-gray-900 leading-none tracking-tighter">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-none tracking-tighter">
                             {liveTelemetry?.temp_c != null ? Number(liveTelemetry.temp_c).toFixed(1) : '--'}
                         </span>
                         <span className="text-sm font-black text-gray-400 uppercase">°C</span>
                     </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-blue-50/40 to-indigo-50/40 p-6 rounded-[2rem] border border-blue-100/30 group hover:border-blue-200 transition-all shadow-sm">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                            <Droplets className="w-5 h-5 text-blue-600" />
+                <div className="bg-gradient-to-br from-blue-50/40 to-indigo-50/40 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-blue-100/30 group hover:border-blue-200 transition-all shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                            <Droplets className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                         </div>
                         <span className="text-[10px] font-black text-blue-600/70 uppercase tracking-widest">Keasaman</span>
                     </div>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-gray-900 leading-none tracking-tighter">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-none tracking-tighter">
                             {liveTelemetry?.ph != null ? Number(liveTelemetry.ph).toFixed(2) : '--'}
                         </span>
                         <span className="text-[11px] font-black text-blue-400 uppercase tracking-tight">pH</span>
                     </div>
                 </div>
 
-                <div className="col-span-1 bg-gradient-to-br from-emerald-50/40 to-primary/5 p-6 rounded-[2rem] border border-primary/10 group hover:border-primary/20 transition-all shadow-sm">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                            <Waves className="w-5 h-5 text-primary" />
+                <div className="col-span-1 bg-gradient-to-br from-emerald-50/40 to-primary/5 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-primary/10 group hover:border-primary/20 transition-all shadow-sm">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                            <Waves className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                         </div>
                         <span className="text-[10px] font-black text-primary/70 uppercase tracking-widest">Air</span>
                     </div>
-                    <div className="flex items-baseline gap-2 mb-4">
-                        <span className="text-4xl font-black text-gray-900 leading-none tracking-tighter">
+                    <div className="flex items-baseline gap-2 mb-3 sm:mb-4">
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 leading-none tracking-tighter">
                             {liveTelemetry?.water_level != null ? liveTelemetry.water_level : '--'}
                         </span>
                         <span className="text-sm font-black text-primary uppercase">%</span>
@@ -240,23 +270,23 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 </div>
 
                 <div 
-                    className={`col-span-1 bg-white p-6 rounded-[2rem] border border-gray-100 group transition-all shadow-sm ${!readonly && role === 'OWNER' ? 'cursor-pointer hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5' : ''}`}
+                    className={`col-span-1 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-gray-100 group transition-all shadow-sm ${!readonly && role === 'OWNER' ? 'cursor-pointer hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5' : ''}`}
                     onClick={() => !readonly && role === 'OWNER' && setShowPhDialog(true)}
                 >
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center text-white">
-                                <Target className="w-5 h-5" />
+                    <div className="flex items-center justify-between mb-3 sm:mb-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gray-900 flex items-center justify-center text-white">
+                                <Target className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target</span>
                         </div>
                         {!readonly && role === 'OWNER' && <Settings2 className="h-4 w-4 text-gray-200 group-hover:text-primary transition-colors" />}
                     </div>
-                    <div className="text-4xl font-black text-gray-900 tracking-tighter">
+                    <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tighter">
                         {settings.target_ph.toFixed(2)}
                     </div>
                     {!readonly && role === 'OWNER' && (
-                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.15em] mt-3 flex items-center gap-2">
+                        <p className="text-[9px] font-black text-primary uppercase tracking-[0.15em] mt-2 sm:mt-3 flex items-center gap-2">
                              Update Target <ArrowRight className="h-2.5 w-2.5" />
                         </p>
                     )}
@@ -264,16 +294,16 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             </div>
 
             {/* Controls Card */}
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
-                <div className="p-8 border-b border-gray-50/50 bg-gray-50/30">
+            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
+                <div className="p-4 sm:p-8 border-b border-gray-50/50 bg-gray-50/30">
                     <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm">
-                                <Activity className="h-5 w-5" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm">
+                                <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
-                            <h3 className="text-lg font-black text-gray-900 tracking-tight">Kontrol Evakuasi</h3>
+                            <h3 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">Kontrol Evakuasi</h3>
                         </div>
-                        <Badge 
+                        <Badge
                             variant="outline"
                             className={`px-4 py-2 rounded-2xl border-0 shadow-lg h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 ${liveMode === 'auto' ? 'bg-primary text-white shadow-primary/20' : 'bg-amber-500 text-white shadow-amber-500/20'}`}
                             onClick={() => !readonly && role === 'OWNER' && handleModeToggle(liveMode === 'auto' ? 'manual' : 'auto')}
@@ -281,47 +311,22 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                             {liveMode === 'auto' ? <Zap className="h-3 w-3 mr-2" /> : <Settings2 className="h-3 w-3 mr-2" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{liveMode === 'auto' ? 'Mode Otomatis' : 'Mode Manual'}</span>
                         </Badge>
-                        
-                        {/* Test Mode Button */}
-                        {!readonly && role === 'OWNER' && (
-                            <Badge 
-                                variant="outline"
-                                className={`ml-2 px-3 py-2 rounded-2xl border-0 shadow-lg h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 ${liveMode === 'TEST' ? 'bg-purple-500 text-white shadow-purple-500/20' : 'bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-600'}`}
-                                onClick={async () => {
-                                    const result = await showConfirm(
-                                        'Aktifkan Mode Test?',
-                                        'Mode ini akan membuka keran selama 15 detik JIKA pH < Target. Gunakan untuk simulasi drain.',
-                                        'Ya, Test Drain'
-                                    );
-                                    if (result.isConfirmed) {
-                                        setLiveMode('TEST');
-                                        if (client) {
-                                            client.publish(`growify/${mqttDeviceId}/mode`, JSON.stringify({ mode: 'test' }));
-                                        }
-                                        showSuccess('Mode Test Aktif', 'Menunggu kondisi pH...');
-                                    }
-                                }}
-                            >
-                                <Cpu className="h-3 w-3 mr-1" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Test</span>
-                            </Badge>
-                        )}
                     </div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">
                         {liveMode === 'auto' ? 'Sistem akan membuka keran otomatis saat target pH tercapai.' : 'Peringatan: Pembuangan air kini dikontrol secara manual oleh anda.'}
                     </p>
                 </div>
                 <div className="p-8 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                         {/* Uptime Badge */}
-                        <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm px-3 py-1 rounded-full border border-gray-100/50 shadow-sm">
+                        <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full border border-gray-100/50 shadow-sm">
                             <Activity className="w-3 h-3 text-gray-500 animate-pulse" />
                             <span className="text-[10px] font-bold text-gray-600 tracking-wide">
                                 {liveTelemetry?.uptime_s ? `${Math.floor(liveTelemetry.uptime_s / 3600)}h ${Math.floor((liveTelemetry.uptime_s % 3600) / 60)}m` : "Offline"}
                             </span>
                         </div>
                         {/* Status Badge */}
-                        <div className={`flex items-center gap-1 px-3 py-1 rounded-full border shadow-sm ${
+                        <div className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full border shadow-sm ${
                             liveTelemetry?.status === 'FERMENT' ? 'bg-blue-100 border-blue-200 text-blue-700' :
                             liveTelemetry?.status === 'STABLE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700' :
                             liveTelemetry?.status === 'DRAIN' ? 'bg-red-100 border-red-200 text-red-700' :
@@ -337,11 +342,11 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                                  liveTelemetry?.status === 'MANUAL' ? 'MANUAL' : 'IDLE'}
                             </span>
                         </div>
-                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
-                            <Droplets className="h-7 w-7" />
+                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
+                            <Droplets className="h-5 w-5 sm:h-7 sm:w-7" />
                         </div>
                         <div>
-                            <span className={`text-base font-black block leading-tight ${settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'text-blue-600' : 'text-gray-900'}`}>
+                            <span className={`text-sm sm:text-base font-black block leading-tight ${settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'text-blue-600' : 'text-gray-900'}`}>
                                 {settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'Keran Terbuka' : 'Keran Tertutup'}
                             </span>
                             {liveTelemetry?.relay === 1 ? (
@@ -350,7 +355,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                                       <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
                                     </span>
-                                    Sedang Menguras...
+                                    <span className="hidden sm:inline">Sedang Menguras...</span>
                                 </span>
                             ) : liveMode === 'manual' ? (
                                 <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1 block">Kontrol Manual Aktif</span>
@@ -373,10 +378,10 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             </div>
 
             {/* Progress Timeline */}
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 p-8 shadow-sm">
-                <h3 className="text-sm font-black text-gray-900 mb-8 flex items-center gap-3 uppercase tracking-widest">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                         <RefreshCw className="h-4 w-4 text-primary" />
+            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-gray-100 p-4 sm:p-8 shadow-sm">
+                <h3 className="text-sm font-black text-gray-900 mb-6 sm:mb-8 flex items-center gap-2 sm:gap-3 uppercase tracking-widest">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                         <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
                     </div>
                     Tahapan Fermentasi
                 </h3>

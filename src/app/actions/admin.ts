@@ -13,6 +13,11 @@ async function requireAdmin() {
     return session.userId;
 }
 
+// Helper: Generate 6-digit owner code
+function generateOwnerCode(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 export async function createUser(formData: FormData) {
     await requireAdmin();
 
@@ -84,7 +89,7 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
 
 // ── Admin Device Management ──────────────────────────────────────────
 
-export async function adminCreateDevice(name: string, deviceCode: string) {
+export async function adminCreateDevice(name: string, deviceCode: string, ownerCode?: string) {
     await requireAdmin();
 
     if (!name || !deviceCode) {
@@ -98,11 +103,36 @@ export async function adminCreateDevice(name: string, deviceCode: string) {
             return { error: 'Kode perangkat sudah terdaftar' };
         }
 
+        // Validate ownerCode if provided (must be 6 digits)
+        let finalOwnerCode: string | null = null;
+        if (ownerCode && ownerCode.trim()) {
+            const cleanCode = ownerCode.trim();
+            if (!/^\d{6}$/.test(cleanCode)) {
+                return { error: 'Kode Owner harus 6 digit angka' };
+            }
+            // Check if ownerCode already exists on another device
+            const codeExists = await prisma.device.findUnique({ where: { ownerCode: cleanCode } });
+            if (codeExists) {
+                return { error: 'Kode Owner sudah digunakan oleh perangkat lain' };
+            }
+            finalOwnerCode = cleanCode;
+        }
+
         const device = await prisma.device.create({
             data: {
                 name,
                 deviceCode,
+                ownerCode: finalOwnerCode,
                 userId: null // no owner yet
+            }
+        });
+
+        // Log activity
+        await prisma.deviceActivity.create({
+            data: {
+                deviceId: device.id,
+                action: 'DEVICE_CREATED',
+                detail: { name, deviceCode, ownerCode: finalOwnerCode }
             }
         });
 
@@ -114,6 +144,56 @@ export async function adminCreateDevice(name: string, deviceCode: string) {
         if (e.code === 'P2002') {
             return { error: 'Kode perangkat sudah terdaftar' };
         }
+        return { error: e.message || 'Terjadi kesalahan server' };
+    }
+}
+
+export async function adminUpdateDeviceOwnerCode(deviceId: string, ownerCode: string | null) {
+    await requireAdmin();
+
+    if (!deviceId) {
+        return { error: 'ID perangkat tidak valid' };
+    }
+
+    // If setting a code, validate it
+    if (ownerCode && ownerCode.trim()) {
+        const cleanCode = ownerCode.trim();
+        if (!/^\d{6}$/.test(cleanCode)) {
+            return { error: 'Kode Owner harus 6 digit angka' };
+        }
+        // Check if ownerCode already exists on another device
+        const codeExists = await prisma.device.findUnique({ 
+            where: { ownerCode: cleanCode },
+            select: { id: true }
+        });
+        if (codeExists && codeExists.id !== deviceId) {
+            return { error: 'Kode Owner sudah digunakan oleh perangkat lain' };
+        }
+        ownerCode = cleanCode;
+    } else {
+        ownerCode = null;
+    }
+
+    try {
+        await prisma.device.update({
+            where: { id: deviceId },
+            data: { ownerCode }
+        });
+
+        // Log activity
+        await prisma.deviceActivity.create({
+            data: {
+                deviceId,
+                action: 'OWNER_CODE_UPDATED',
+                detail: { ownerCode }
+            }
+        });
+
+        revalidatePath('/admin/devices');
+        revalidatePath(`/admin/devices/${deviceId}`);
+        return { success: true };
+    } catch (e: any) {
+        console.error('Error updating owner code:', e);
         return { error: e.message || 'Terjadi kesalahan server' };
     }
 }
@@ -209,6 +289,42 @@ export async function adminAddDeviceUser(deviceId: string, userId: string, role:
         return { success: true };
     } catch (e: any) {
         return { error: 'Gagal menambahkan pengguna' };
+    }
+}
+
+export async function adminUpdateDeviceUserRole(deviceId: string, userId: string, role: 'owner' | 'viewer') {
+    await requireAdmin();
+    
+    if (!deviceId || !userId || !role) {
+        return { error: 'Data tidak valid' };
+    }
+
+    if (!['owner', 'viewer'].includes(role)) {
+        return { error: 'Role tidak valid' };
+    }
+
+    try {
+        await prisma.deviceUser.update({
+            where: {
+                deviceId_userId: { deviceId, userId }
+            },
+            data: { role }
+        });
+
+        await prisma.deviceActivity.create({
+            data: {
+                deviceId,
+                action: 'USER_ROLE_UPDATED',
+                detail: { targetUserId: userId, newRole: role }
+            }
+        });
+
+        revalidatePath(`/admin/devices/${deviceId}`);
+        revalidatePath('/farmer');
+        return { success: true };
+    } catch (e: any) {
+        console.error('Error updating user role:', e);
+        return { error: e.message || 'Gagal memperbarui role' };
     }
 }
 

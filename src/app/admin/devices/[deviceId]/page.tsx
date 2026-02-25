@@ -122,7 +122,8 @@ export default async function AdminDeviceDetailPage({ params }: { params: Promis
                             <DeviceSettingsForm 
                                 deviceId={device.id} 
                                 deviceCode={device.deviceCode}
-                                initialMaxUsers={device.maxUsers} 
+                                initialMaxUsers={device.maxUsers}
+                                initialOwnerCode={device.ownerCode}
                                 currentSettings={device.settings ? {
                                     targetPh: Number(device.settings.targetPh),
                                     maxHeight: (device.settings as any).maxHeight

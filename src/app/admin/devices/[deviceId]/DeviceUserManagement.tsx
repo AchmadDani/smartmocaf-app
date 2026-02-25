@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { adminRemoveDeviceUser, adminAddDeviceUser } from '@/app/actions/admin';
+import { adminRemoveDeviceUser, adminAddDeviceUser, adminUpdateDeviceUserRole } from '@/app/actions/admin';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,9 @@ import {
     X,
     Users,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Edit3,
+    Save
 } from 'lucide-react';
 import { showConfirm, showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
 import {
@@ -59,6 +61,9 @@ export default function DeviceUserManagement({
 }) {
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<DeviceUser | null>(null);
+    const [editRole, setEditRole] = useState<'owner' | 'viewer'>('viewer');
     const [selectedUserId, setSelectedUserId] = useState('');
     const [selectedRole, setSelectedRole] = useState<'owner' | 'viewer'>('viewer');
 
@@ -95,6 +100,29 @@ export default function DeviceUserManagement({
                 setSelectedUserId('');
             } else {
                 showError(res.error || 'Gagal menambahkan pengguna');
+            }
+        });
+    };
+
+    const openEditDialog = (user: DeviceUser) => {
+        setEditingUser(user);
+        setEditRole(user.role);
+        setEditOpen(true);
+    };
+
+    const handleEditRole = async () => {
+        if (!editingUser) return;
+        
+        setEditOpen(false);
+        showLoading('Memperbarui role...');
+        startTransition(async () => {
+            const res = await adminUpdateDeviceUserRole(deviceId, editingUser.userId, editRole);
+            closeSwal();
+            if (res.success) {
+                showSuccess('Role diperbarui');
+                setEditingUser(null);
+            } else {
+                showError(res.error || 'Gagal memperbarui role');
             }
         });
     };
@@ -169,6 +197,38 @@ export default function DeviceUserManagement({
                 </Dialog>
             </div>
 
+            {/* Edit Role Dialog */}
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Ubah Hak Akses</DialogTitle>
+                        <DialogDescription>
+                            Ubah role akses untuk {editingUser?.user.fullName}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label>Hak Akses (Role)</Label>
+                            <Select onValueChange={(v) => setEditRole(v as 'owner' | 'viewer')} value={editRole}>
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="owner">Owner (Kontrol Penuh)</SelectItem>
+                                    <SelectItem value="viewer">Viewer (Hanya Lihat)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
+                        <Button onClick={handleEditRole} disabled={isPending || editRole === editingUser?.role}>
+                            Simpan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <div className="overflow-x-auto">
                 <Table>
                     <TableHeader>
@@ -211,15 +271,27 @@ export default function DeviceUserManagement({
                                     </span>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon-sm" 
-                                        className="text-gray-400 hover:text-red-500 hover:bg-red-50"
-                                        onClick={() => handleRemove(item.userId, item.user.fullName)}
-                                        disabled={isPending}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex items-center justify-end gap-1">
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon-sm" 
+                                            className="text-gray-400 hover:text-blue-500 hover:bg-blue-50"
+                                            onClick={() => openEditDialog(item)}
+                                            disabled={isPending}
+                                            title="Ubah role"
+                                        >
+                                            <Edit3 className="h-4 w-4" />
+                                        </Button>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon-sm" 
+                                            className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+                                            onClick={() => handleRemove(item.userId, item.user.fullName)}
+                                            disabled={isPending}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}

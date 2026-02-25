@@ -6,28 +6,28 @@ export default function LandingPage() {
         <div className="min-h-screen bg-white font-sans antialiased">
             {/* ========== HEADER ========== */}
             <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-3">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+                    <Link href="/" className="flex items-center gap-2 md:gap-3">
                         <Image
                             src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
                             alt="Growify x SmartMocaf"
-                            width={180}
-                            height={48}
-                            className="h-10 w-auto object-contain"
+                            width={140}
+                            height={36}
+                            className="h-8 md:h-10 w-auto object-contain"
                             priority
                         />
                     </Link>
-                    <nav className="hidden md:flex items-center gap-8">
-                        <a href="#masalah" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Masalah</a>
-                        <a href="#solusi" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Solusi</a>
-                        <a href="#fitur" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Fitur</a>
-                        <a href="#tentang" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Tentang</a>
+                    <nav className="hidden lg:flex items-center gap-6 md:gap-8">
+                        <a href="#masalah" className="text-xs md:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Masalah</a>
+                        <a href="#solusi" className="text-xs md:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Solusi</a>
+                        <a href="#fitur" className="text-xs md:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Fitur</a>
+                        <a href="#tentang" className="text-xs md:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Tentang</a>
                     </nav>
-                    <div className="flex items-center gap-3">
-                        <Link href="/auth/login" className="text-sm font-semibold text-gray-700 hover:text-gray-900 px-4 py-2 transition-colors">
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <Link href="/auth/login" className="text-xs md:text-sm font-semibold text-gray-700 hover:text-gray-900 px-3 md:px-4 py-2 transition-colors">
                             Masuk
                         </Link>
-                        <Link href="/auth/register" className="text-sm font-semibold text-white bg-[#009e3e] hover:bg-[#007d31] px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-[#009e3e]/20 hover:shadow-xl hover:shadow-[#009e3e]/30">
+                        <Link href="/auth/register" className="text-xs md:text-sm font-semibold text-white bg-[#009e3e] hover:bg-[#007d31] px-4 md:px-5 py-2 md:py-2.5 rounded-lg md:rounded-xl transition-all shadow-lg shadow-[#009e3e]/20 hover:shadow-xl hover:shadow-[#009e3e]/30">
                             Daftar
                         </Link>
                     </div>
@@ -35,67 +35,95 @@ export default function LandingPage() {
             </header>
 
             {/* ========== HERO SECTION ========== */}
-            <section className="pt-32 pb-20 px-6 bg-gradient-to-b from-gray-50 to-white">
+            <section className="pt-24 md:pt-32 pb-16 md:pb-20 px-4 md:px-6 bg-gradient-to-b from-gray-50 to-white">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center max-w-4xl mx-auto mb-16">
-                        <div className="inline-flex items-center gap-2 bg-[#009e3e]/10 text-[#009e3e] text-sm font-semibold px-4 py-2 rounded-full mb-6">
+                    <div className="text-center max-w-4xl mx-auto mb-10 md:mb-16">
+                        <div className="inline-flex items-center gap-2 bg-[#009e3e]/10 text-[#009e3e] text-xs md:text-sm font-semibold px-3 md:px-4 py-2 rounded-full mb-4 md:mb-6">
                             <span className="w-2 h-2 bg-[#009e3e] rounded-full animate-pulse"></span>
                             Innovillage 2025 - Desa Purwodadi, Pringsewu
                         </div>
-                        <h1 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
+                        <h1 className="text-2xl md:text-4xl lg:text-6xl font-bold text-gray-900 leading-tight mb-4 md:mb-6">
                             Monitoring Fermentasi Mocaf
                             <span className="text-[#009e3e]"> Lebih Cerdas</span>
                         </h1>
-                        <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+                        <p className="text-sm md:text-lg text-gray-600 leading-relaxed max-w-2xl md:max-w-3xl mx-auto">
                             SmartMocaf membantu petani Pringsewu mengoptimalkan proses fermentasi singkong menjadi tepung mocaf berkualitas tinggi dengan monitoring pH dan suhu otomatis.
                         </p>
                     </div>
 
-                    {/* Dashboard Mockup */}
+                    {/* Dashboard Mockup - Same style as internal pages */}
                     <div className="max-w-5xl mx-auto">
                         <div className="bg-white rounded-2xl shadow-2xl shadow-gray-200/50 border border-gray-200 overflow-hidden">
                             {/* Browser Chrome */}
-                            <div className="bg-gray-100 px-4 py-3 flex items-center gap-3 border-b border-gray-200">
-                                <div className="flex gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                            <div className="bg-gray-100 px-3 md:px-4 py-2 md:py-3 flex items-center gap-2 md:gap-3 border-b border-gray-200">
+                                <div className="flex gap-1.5 md:gap-2">
+                                    <div className="w-2.5 md:w-3 h-2.5 md:h-3 rounded-full bg-red-400"></div>
+                                    <div className="w-2.5 md:w-3 h-2.5 md:h-3 rounded-full bg-yellow-400"></div>
+                                    <div className="w-2.5 md:w-3 h-2.5 md:h-3 rounded-full bg-green-400"></div>
                                 </div>
-                                <div className="flex-1 bg-white rounded-lg px-4 py-1.5 text-sm text-gray-500 font-mono">
-                                    dashboard.smartmocaf.io
+                                <div className="flex-1 bg-white rounded-lg px-3 md:px-4 py-1 md:py-1.5 text-xs md:text-sm text-gray-500 font-mono">
+                                    smartmocaf.com
                                 </div>
                             </div>
-                            {/* Dashboard Content */}
-                            <div className="p-6 bg-gray-50">
-                                <div className="flex items-center justify-between mb-6">
+                            {/* Dashboard Content - Styled like internal pages */}
+                            <div className="p-4 md:p-6 bg-gray-50">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
                                     <div>
-                                        <h3 className="font-semibold text-gray-900">Fermentor Unit #001</h3>
-                                        <p className="text-sm text-gray-500">Batch: FC-2026-0129</p>
+                                        <h3 className="font-bold text-gray-900 text-base md:text-lg">Fermentor Unit #001</h3>
+                                        <p className="text-xs md:text-sm text-gray-500">Batch: FC-2026-0129</p>
                                     </div>
-                                    <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-                                        Sedang Berjalan
+                                    <span className="px-3 md:px-4 py-1.5 md:py-1 bg-emerald-50 text-emerald-600 text-xs md:text-sm font-semibold rounded-full border border-emerald-100 w-fit">
+                                        ● Sedang Berjalan
                                     </span>
                                 </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-white p-4 rounded-xl border border-gray-100">
-                                        <p className="text-xs text-gray-500 mb-1">pH Level</p>
-                                        <p className="text-2xl font-bold text-gray-900">4.52</p>
-                                        <p className="text-xs text-green-600 mt-1">Target: 4.50</p>
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                                    {/* pH Card - with animation */}
+                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
+                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">pH Level</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="ph-value">4.52</p>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                                            <p className="text-[10px] md:text-xs font-semibold text-emerald-600">Target: 4.50</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-white p-4 rounded-xl border border-gray-100">
-                                        <p className="text-xs text-gray-500 mb-1">Suhu</p>
-                                        <p className="text-2xl font-bold text-gray-900">28°C</p>
-                                        <p className="text-xs text-gray-400 mt-1">Optimal</p>
+                                    {/* Temperature Card */}
+                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
+                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Suhu</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="temp-value">28</p>
+                                            <span className="text-sm font-bold text-gray-400">°C</span>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                                            <p className="text-[10px] md:text-xs font-semibold text-gray-500">Optimal</p>
+                                        </div>
                                     </div>
-                                    <div className="bg-white p-4 rounded-xl border border-gray-100">
-                                        <p className="text-xs text-gray-500 mb-1">Level Air</p>
-                                        <p className="text-2xl font-bold text-gray-900">85%</p>
-                                        <p className="text-xs text-gray-400 mt-1">Normal</p>
+                                    {/* Water Level Card */}
+                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
+                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Level Air</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="water-value">85</p>
+                                            <span className="text-sm font-bold text-gray-400">%</span>
+                                        </div>
+                                        <div className="mt-2">
+                                            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                                <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-1000 ease-out" id="water-bar" style={{ width: '85%' }}></div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div className="bg-white p-4 rounded-xl border border-gray-100">
-                                        <p className="text-xs text-gray-500 mb-1">Durasi</p>
-                                        <p className="text-2xl font-bold text-gray-900">18j</p>
-                                        <p className="text-xs text-gray-400 mt-1">dari 48 jam</p>
+                                    {/* Duration Card */}
+                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
+                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Durasi</p>
+                                        <div className="flex items-baseline gap-1">
+                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="duration-value">18</p>
+                                            <span className="text-sm font-bold text-gray-400">jam</span>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                            <p className="text-[10px] md:text-xs font-semibold text-gray-400">dari 48 jam</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -104,72 +132,103 @@ export default function LandingPage() {
                 </div>
             </section>
 
+            {/* Animated data script */}
+            <script dangerouslySetInnerHTML={{
+                __html: `
+                    (function() {
+                        // Animated counter
+                        function animateValue(id, start, end, duration, suffix = '') {
+                            const obj = document.getElementById(id);
+                            let startTimestamp = null;
+                            const step = (timestamp) => {
+                                if (!startTimestamp) startTimestamp = timestamp;
+                                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                                const value = Math.floor(progress * (end - start) + start);
+                                obj.textContent = value + suffix;
+                                if (progress < 1) {
+                                    window.requestAnimationFrame(step);
+                                }
+                            };
+                            window.requestAnimationFrame(step);
+                        }
+                        
+                        // Animate on load
+                        setTimeout(function() {
+                            animateValue('ph-value', 0, 4.52, 1500, '.');
+                            animateValue('temp-value', 0, 28, 1200, '');
+                            animateValue('water-value', 0, 85, 1400, '');
+                            animateValue('duration-value', 0, 18, 1000, '');
+                        }, 300);
+                    })();
+                `
+            }} />
+
             {/* ========== PROBLEM SECTION ========== */}
-            <section id="masalah" className="py-24 px-6 bg-white overflow-hidden">
+            <section id="masalah" className="py-16 md:py-24 px-4 md:px-6 bg-white overflow-hidden">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center max-w-3xl mx-auto mb-16">
-                        <span className="text-sm font-black text-red-500 uppercase tracking-[0.2em] mb-4 block">Urgensi & Permasalahan</span>
-                        <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 tracking-tight">
+                    <div className="text-center max-w-3xl mx-auto mb-10 md:mb-16">
+                        <span className="text-xs md:text-sm font-black text-red-500 uppercase tracking-[0.2em] mb-3 md:mb-4 block">Urgensi & Permasalahan</span>
+                        <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 md:mb-6 tracking-tight">
                             Krisis Harga & Hilirisasi <br className="hidden md:block" />
                             <span className="text-[#009e3e]">Singkong di Lampung</span>
                         </h2>
-                        <p className="text-lg text-gray-600 leading-relaxed">
+                        <p className="text-sm md:text-lg text-gray-600 leading-relaxed">
                             Meskipun Lampung menjadi "Raksasa Singkong" dunia, petani di tingkat akar rumput 
                             masih terjebak dalam ketidakpastian harga dan minimnya nilai tambah.
                         </p>
                     </div>
 
-                    <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+                    <div className="grid lg:grid-cols-2 gap-6 md:gap-8 items-stretch">
                         {/* News Card 1: Kumparan */}
-                        <div className="group relative bg-[#fcfdf2] rounded-[2.5rem] p-8 md:p-12 border border-yellow-100/50 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:rotate-12 transition-transform duration-500">
-                                <svg className="w-32 h-32 text-yellow-600" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-2 10H7v-2h10v2z"/></svg>
+                        <div className="group relative bg-[#fcfdf2] rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 lg:p-12 border border-yellow-100/50 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden">
+                            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-10 group-hover:rotate-12 transition-transform duration-500">
+                                <svg className="w-20 md:w-24 lg:w-32 h-20 md:h-24 lg:h-32 text-yellow-600" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-2 10H7v-2h10v2z"/></svg>
                             </div>
                             <div className="relative z-10">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
+                                <div className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1 md:py-1.5 bg-yellow-100 text-yellow-700 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider mb-4 md:mb-6">
                                     Statistik Nasional
                                 </div>
-                                <h3 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">
+                                <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 md:mb-6 leading-tight">
                                     Lampung Menyumbang <span className="text-red-500 underline decoration-wavy decoration-red-200">51% Produksi</span> Singkong Nasional
                                 </h3>
-                                <div className="space-y-4 mb-8">
-                                    <blockquote className="border-l-4 border-yellow-300 pl-4 py-2 text-gray-700 italic leading-relaxed bg-white/50 rounded-r-xl">
+                                <div className="space-y-3 md:space-y-4 mb-6 md:mb-8">
+                                    <blockquote className="border-l-3 md:border-l-4 border-yellow-300 pl-3 md:pl-4 py-1.5 md:py-2 text-sm md:text-gray-700 italic leading-relaxed bg-white/50 rounded-r-lg md:rounded-r-xl">
                                         "Produksi singkong Lampung pada 2024 mencapai 7,9 juta ton atau setara 51% dari total produksi nasional."
                                     </blockquote>
-                                    <p className="text-sm text-gray-500 font-medium">Sumber: <a href="https://kumparan.com" target="_blank" className="text-blue-500 underline">kumparan.com</a></p>
+                                    <p className="text-xs md:text-sm text-gray-500 font-medium">Sumber: <a href="https://kumparan.com" target="_blank" className="text-blue-500 underline">kumparan.com</a></p>
                                 </div>
-                                <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-yellow-50">
-                                    <div className="text-3xl font-black text-yellow-600">7.9Jt</div>
-                                    <div className="text-xs text-gray-500 uppercase font-bold tracking-wider leading-tight">Ton Per Tahun <br/> Kapasitas Produksi</div>
+                                <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-yellow-50">
+                                    <div className="text-2xl md:text-3xl font-black text-yellow-600">7.9Jt</div>
+                                    <div className="text-[10px] md:text-xs text-gray-500 uppercase font-bold tracking-wider leading-tight">Ton Per Tahun <br/> Kapasitas Produksi</div>
                                 </div>
                             </div>
                         </div>
 
                         {/* News Card 2: Kompas */}
-                        <div className="group relative bg-[#fff5f5] rounded-[2.5rem] p-8 md:p-12 border border-red-100/50 shadow-sm hover:shadow-xl transition-all duration-500">
-                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:-rotate-12 transition-transform duration-500">
-                                <svg className="w-32 h-32 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/></svg>
+                        <div className="group relative bg-[#fff5f5] rounded-2xl md:rounded-[2.5rem] p-6 md:p-8 lg:p-12 border border-red-100/50 shadow-sm hover:shadow-xl transition-all duration-500">
+                            <div className="absolute top-0 right-0 p-6 md:p-8 opacity-10 group-hover:-rotate-12 transition-transform duration-500">
+                                <svg className="w-20 md:w-24 lg:w-32 h-20 md:h-24 lg:h-32 text-red-600" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6h-6z"/></svg>
                             </div>
                             <div className="relative z-10">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-xs font-bold uppercase tracking-wider mb-6">
+                                <div className="inline-flex items-center gap-2 px-2.5 md:px-3 py-1 md:py-1.5 bg-red-100 text-red-700 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider mb-4 md:mb-6">
                                     Polemik Harga
                                 </div>
-                                <h3 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">
+                                <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 md:mb-6 leading-tight">
                                     Harga Singkong Sangat <span className="text-red-500">Rendah & Tidak Stabil</span>
                                 </h3>
-                                <div className="space-y-4 mb-8">
-                                    <blockquote className="border-l-4 border-red-300 pl-4 py-2 text-gray-700 italic leading-relaxed bg-white/50 rounded-r-xl">
+                                <div className="space-y-3 md:space-y-4 mb-6 md:mb-8">
+                                    <blockquote className="border-l-3 md:border-l-4 border-red-300 pl-3 md:pl-4 py-1.5 md:py-2 text-sm md:text-gray-700 italic leading-relaxed bg-white/50 rounded-lg md:rounded-r-xl">
                                         "Tahun ini harga singkong di tingkat petani berkisar Rp 1.000 - Rp 1.100 dengan rafaksi (potongan) 30-40%."
                                     </blockquote>
-                                    <p className="text-sm text-gray-500 font-medium">Sumber: <a href="https://kompas.id" target="_blank" className="text-blue-500 underline">kompas.id</a></p>
+                                    <p className="text-xs md:text-sm text-gray-500 font-medium">Sumber: <a href="https://kompas.id" target="_blank" className="text-blue-500 underline">kompas.id</a></p>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-white rounded-2xl border border-red-50 text-center">
-                                        <div className="text-2xl font-black text-red-600">Rp 1000</div>
+                                <div className="grid grid-cols-2 gap-3 md:gap-4">
+                                    <div className="p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-red-50 text-center">
+                                        <div className="text-xl md:text-2xl font-black text-red-600">Rp 1000</div>
                                         <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-1">Harga Terendah</div>
                                     </div>
-                                    <div className="p-4 bg-white rounded-2xl border border-red-50 text-center">
-                                        <div className="text-2xl font-black text-red-600">40%</div>
+                                    <div className="p-3 md:p-4 bg-white rounded-xl md:rounded-2xl border border-red-50 text-center">
+                                        <div className="text-xl md:text-2xl font-black text-red-600">40%</div>
                                         <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-1">Potongan Rafaksi</div>
                                     </div>
                                 </div>
@@ -178,16 +237,16 @@ export default function LandingPage() {
                     </div>
 
                     {/* Bridge Quote */}
-                    <div className="mt-12 bg-gray-900 rounded-[2rem] p-8 md:p-10 relative overflow-hidden group">
+                    <div className="mt-8 md:mt-12 bg-gray-900 rounded-2xl md:rounded-[2rem] p-6 md:p-8 lg:p-10 relative overflow-hidden group">
                         <div className="absolute inset-0 bg-gradient-to-r from-[#009e3e]/20 to-transparent opacity-50"></div>
-                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
+                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-6 md:gap-8">
                             <div className="flex-1">
-                                <p className="text-xl md:text-2xl text-white font-medium leading-relaxed">
+                                <p className="text-base md:text-xl lg:text-2xl text-white font-medium leading-relaxed">
                                     "Struktur pasar <span className="text-[#009e3e] font-bold">Oligopsoni</span> membuat petani tidak memiliki daya saing. Solusinya adalah <span className="italic text-gray-300 underline decoration-gray-600">Hilirisasi</span> dengan teknologi pengolahan mocaf."
                                 </p>
                             </div>
-                            <div className="flex-shrink-0 text-center md:text-left border-l border-gray-800 pl-8">
-                                <p className="text-sm text-gray-500 uppercase font-bold tracking-widest mb-1">Analisis Ekonomi</p>
+                            <div className="flex-shrink-0 text-center md:text-left border-l border-gray-800 pl-0 md:pl-6 lg:pl-8">
+                                <p className="text-xs md:text-sm text-gray-500 uppercase font-bold tracking-widest mb-1">Analisis Ekonomi</p>
                                 <p className="text-white font-bold">Dosen FEB Unila</p>
                             </div>
                         </div>

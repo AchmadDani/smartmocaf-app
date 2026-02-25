@@ -118,7 +118,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
             status={status as any}
             telemetry={telemetry as any}
             history={history as any}
-            role={access.role}
+            role={access.role.toUpperCase() as 'OWNER' | 'VIEWER'}
         />
     );
 }

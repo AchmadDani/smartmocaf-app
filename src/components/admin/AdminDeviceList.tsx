@@ -59,10 +59,11 @@ export default function AdminDeviceList({ initialDevices }: { initialDevices: De
     const handleAdd = (formData: FormData) => {
         const name = formData.get('name') as string;
         const deviceCode = formData.get('device_code') as string;
+        const ownerCode = formData.get('owner_code') as string;
 
         startTransition(async () => {
             showLoading('Mendaftarkan perangkat...');
-            const result = await adminCreateDevice(name, deviceCode);
+            const result = await adminCreateDevice(name, deviceCode, ownerCode);
             closeSwal();
 
             if (result.error) {
@@ -81,7 +82,7 @@ export default function AdminDeviceList({ initialDevices }: { initialDevices: De
             'Ya, Hapus'
         );
 
-        if (result) {
+        if (result.isConfirmed) {
             startTransition(async () => {
                 showLoading('Menghapus...');
                 const res = await adminDeleteDevice(id);
@@ -136,6 +137,20 @@ export default function AdminDeviceList({ initialDevices }: { initialDevices: De
                             <div className="grid gap-2">
                                 <Label htmlFor="name" className="text-xs font-black uppercase tracking-widest text-gray-400">Nama Perangkat</Label>
                                 <Input id="name" name="name" placeholder="Masukan nama unit (Contoh: Fermenter-01)" required className="h-12 rounded-xl" />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="owner_code" className="text-xs font-black uppercase tracking-widest text-gray-400">
+                                    Kode Owner 
+                                    <span className="text-gray-300 font-normal normal-case">(Opsional)</span>
+                                </Label>
+                                <Input 
+                                    id="owner_code" 
+                                    name="owner_code" 
+                                    placeholder="6 digit (contoh: 123456)" 
+                                    maxLength={6}
+                                    className="h-12 rounded-xl font-mono" 
+                                />
+                                <p className="text-[10px] text-gray-400">Kosongkan jika belum ingin menetapkan owner</p>
                             </div>
                             <DialogFooter className="pt-4">
                                 <Button type="submit" disabled={isPending} className="w-full h-12 rounded-xl font-black uppercase text-xs tracking-widest">

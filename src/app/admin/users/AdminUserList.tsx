@@ -44,12 +44,12 @@ export default function AdminUserList({ profiles }: { profiles: UserProfile[] })
 
     const handleToggleActive = async (userId: string, name: string, currentStatus: boolean) => {
         const actionText = currentStatus ? 'Nonaktifkan' : 'Aktifkan';
-        const confirmed = await showConfirm(
+        const result = await showConfirm(
             `${actionText} User?`,
             `User ${name} ${currentStatus ? 'tidak akan bisa login' : 'akan bisa login kembali'}.`
         );
 
-        if (confirmed) {
+        if (result.isConfirmed) {
             showLoading('Memperbarui status...');
             startTransition(async () => {
                 const res = await toggleUserActive(userId, !currentStatus);
@@ -64,13 +64,13 @@ export default function AdminUserList({ profiles }: { profiles: UserProfile[] })
     };
 
     const handleDelete = async (userId: string, name: string) => {
-        const confirmed = await showConfirm(
+        const result = await showConfirm(
             'Hapus User?',
             `Akun ${name} akan dihapus permanen. Aksi ini tidak bisa dibatalkan.`,
             'Ya, Hapus'
         );
 
-        if (confirmed) {
+        if (result.isConfirmed) {
             showLoading('Menghapus user...');
             startTransition(async () => {
                 const res = await deleteUser(userId);

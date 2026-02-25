@@ -38,7 +38,7 @@ async function checkDeviceAccess(deviceId: string, requiredRole: 'owner' | 'view
     return userId;
 }
 
-export async function createDevice(name: string, deviceCode: string) {
+export async function createDevice(name: string, deviceCode: string, ownerCode?: string) {
     const userId = await getUserId();
 
     // Find device registered by admin
@@ -51,6 +51,18 @@ export async function createDevice(name: string, deviceCode: string) {
 
     if (!existingDevice) {
         throw new Error('Perangkat tidak ditemukan');
+    }
+
+    // Validate ownerCode if provided (must be 6 digits)
+    if (ownerCode && ownerCode.trim()) {
+        const cleanCode = ownerCode.trim();
+        if (!/^\d{6}$/.test(cleanCode)) {
+            throw new Error('Kode Owner harus 6 digit angka');
+        }
+        // Check if ownerCode matches the device
+        if (existingDevice.ownerCode && existingDevice.ownerCode !== cleanCode) {
+            throw new Error('Kode Owner tidak cocok dengan perangkat ini');
+        }
     }
 
     // Check if user already has access
@@ -200,7 +212,12 @@ export async function manualDrainToggle(deviceId: string, open: boolean) {
     revalidatePath(`/farmer/${deviceId}`);
 }
 
-export async function startFermentation(deviceId: string, mode: 'auto' | 'manual' = 'auto') {
+export async function startFermentation(
+    deviceId: string, 
+    mode: 'auto' | 'manual' = 'auto',
+    name?: string,
+    cassavaAmount?: number
+) {
     const userId = await checkDeviceAccess(deviceId, 'owner');
 
     // Get current target_ph from settings
@@ -209,9 +226,14 @@ export async function startFermentation(deviceId: string, mode: 'auto' | 'manual
     });
     const targetPh = settings?.targetPh ?? 4.5;
 
+    const fermentationName = name?.trim() || 'Fermentasi Baru';
+    const cassavaKg = cassavaAmount ? Number(cassavaAmount) : null;
+
     const newRun = await prisma.fermentationRun.create({
         data: {
             deviceId,
+            name: fermentationName,
+            cassavaAmount: cassavaKg,
             status: 'running',
             mode: mode as any,
             startedAt: new Date()
@@ -224,7 +246,13 @@ export async function startFermentation(deviceId: string, mode: 'auto' | 'manual
             deviceId,
             userId,
             action: 'START_FERMENTATION',
-            detail: { mode, targetPh, runId: newRun.id }
+            detail: { 
+                mode, 
+                targetPh, 
+                runId: newRun.id,
+                name: fermentationName,
+                cassavaAmount: cassavaKg
+            }
         }
     });
 
@@ -232,6 +260,8 @@ export async function startFermentation(deviceId: string, mode: 'auto' | 'manual
     await createDeviceCommand(deviceId, 'RUN_START', {
         target_ph: Number(targetPh),
         mode: mode,
+        fermentation_name: fermentationName,
+        cassava_amount: cassavaKg,
         telemetry: {
             temp_interval_sec: 60,
             ph_interval_sec: 10800,

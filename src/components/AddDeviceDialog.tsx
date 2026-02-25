@@ -13,6 +13,7 @@ export default function AddDeviceDialog({ variant = 'button' }: AddDeviceDialogP
     const [isOpen, setIsOpen] = useState(false);
     const [deviceName, setDeviceName] = useState('');
     const [deviceCode, setDeviceCode] = useState('');
+    const [ownerCode, setOwnerCode] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
@@ -23,10 +24,11 @@ export default function AddDeviceDialog({ variant = 'button' }: AddDeviceDialogP
         setLoading(true);
 
         try {
-            await createDevice(deviceName, deviceCode);
+            await createDevice(deviceName, deviceCode, ownerCode || undefined);
             setIsOpen(false);
             setDeviceName('');
             setDeviceCode('');
+            setOwnerCode('');
             showSuccess('Alat Ditambahkan', `${deviceName} berhasil ditambahkan ke sistem.`);
             router.refresh();
         } catch (err: any) {
@@ -122,6 +124,23 @@ export default function AddDeviceDialog({ variant = 'button' }: AddDeviceDialogP
                                 />
                                 <p className="text-xs text-gray-400 mt-2">
                                     Kode device tertera pada alat IoT Anda (contoh: 0001)
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Kode Owner <span className="text-gray-400 font-normal">(Opsional)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={ownerCode}
+                                    onChange={(e) => setOwnerCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#009e3e]/20 focus:border-[#009e3e] outline-none text-gray-900 transition-all font-mono tracking-wider"
+                                    placeholder="123456"
+                                    maxLength={6}
+                                />
+                                <p className="text-xs text-gray-400 mt-2">
+                                    Masukkan 6 digit kode owner jika diperlukan
                                 </p>
                             </div>
 

@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useTransition } from 'react';
-import { adminUpdateDeviceMaxUsers } from '@/app/actions/admin';
+import { adminUpdateDeviceMaxUsers, adminUpdateDeviceOwnerCode } from '@/app/actions/admin';
 import { updateDeviceSettings } from '@/app/actions/device';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,21 +10,25 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
 import { useMqtt } from '@/components/MqttProvider';
-import { Users, Save, Target, Ruler } from 'lucide-react';
+import { Users, Save, Target, Ruler, KeyRound } from 'lucide-react';
 
 export default function DeviceSettingsForm({ 
     deviceId, 
     deviceCode,
     initialMaxUsers,
+    initialOwnerCode,
     currentSettings
 }: { 
     deviceId: string; 
     deviceCode: string;
     initialMaxUsers: number;
+    initialOwnerCode: string | null;
     currentSettings: any;
 }) {
     const [isPending, startTransition] = useTransition();
     const { client } = useMqtt();
+    const [ownerCode, setOwnerCode] = useState(initialOwnerCode || '');
+    const [ownerCodeEditing, setOwnerCodeEditing] = useState(false);
 
     const handleMaxUsersSubmit = async (formData: FormData) => {
         const maxUsers = Number(formData.get('max_users'));
@@ -67,8 +72,68 @@ export default function DeviceSettingsForm({
         });
     };
 
+    const handleOwnerCodeSubmit = async () => {
+        showLoading('Menyimpan kode owner...');
+        startTransition(async () => {
+            const code = ownerCode.trim() || null;
+            const res = await adminUpdateDeviceOwnerCode(deviceId, code);
+            closeSwal();
+            if (res.success) {
+                showSuccess('Kode Owner Diperbarui');
+                setOwnerCodeEditing(false);
+            } else {
+                showError(res.error || 'Gagal memperbarui kode owner');
+            }
+        });
+    };
+
     return (
         <div className="space-y-4">
+            {/* Owner Code */}
+            <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-xs font-bold">
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Kode Owner
+                </Label>
+                {ownerCodeEditing ? (
+                    <div className="flex gap-2">
+                        <Input 
+                            value={ownerCode}
+                            onChange={(e) => setOwnerCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="6 digit"
+                            maxLength={6}
+                            className="flex-1 font-mono"
+                        />
+                        <Button type="button" size="icon" onClick={handleOwnerCodeSubmit} disabled={isPending}>
+                            <Save className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="outline" size="icon" onClick={() => { setOwnerCodeEditing(false); setOwnerCode(initialOwnerCode || ''); }}>
+                            <KeyRound className="h-4 w-4" />
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between gap-2 p-2 bg-gray-50 rounded-lg border">
+                        <span className="font-mono text-sm font-bold">
+                            {initialOwnerCode || '-'}
+                        </span>
+                        <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setOwnerCodeEditing(true)}
+                            className="text-xs"
+                        >
+                            Edit
+                        </Button>
+                    </div>
+                )}
+                <p className="text-[10px] text-gray-400">
+                    6 digit kode opsional untuk keamanan perangkat.
+                </p>
+            </div>
+
+            <Separator className="my-3" />
+
             {/* Max Users */}
             <form action={handleMaxUsersSubmit} className="space-y-2">
                 <Label htmlFor="max_users" className="flex items-center gap-2 text-xs font-bold">

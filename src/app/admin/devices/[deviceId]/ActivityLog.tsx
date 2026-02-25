@@ -10,7 +10,10 @@ import {
   CheckCircle2, 
   AlertCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Shield,
+  KeyRound,
+  MonitorSmartphone
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -31,10 +34,34 @@ const ACTION_MAP: Record<string, { label: string, color: string, icon: any }> = 
     'SETTINGS_UPDATE': { label: 'Update Pengaturan', color: 'info', icon: Settings2 },
     'USER_ADDED': { label: 'Pengguna Ditambah', color: 'info', icon: UserPlus },
     'USER_REMOVED': { label: 'Pengguna Dilepas', color: 'warning', icon: UserMinus },
+    'USER_ROLE_UPDATED': { label: 'Role Diubah', color: 'info', icon: Shield },
     'DEVICE_CLAIMED': { label: 'Alat Diklaim', color: 'success', icon: CheckCircle2 },
+    'DEVICE_CREATED': { label: 'Alat Dibuat', color: 'success', icon: MonitorSmartphone },
+    'OWNER_CODE_UPDATED': { label: 'Kode Owner Diubah', color: 'info', icon: KeyRound },
     'DRAIN_OPEN': { label: 'Buka Keran', color: 'warning', icon: AlertCircle },
     'DRAIN_CLOSE': { label: 'Tutup Keran', color: 'info', icon: CheckCircle2 },
 };
+
+function formatDetail(detail: any): string {
+    if (!detail) return '-';
+    try {
+        const d = typeof detail === 'string' ? JSON.parse(detail) : detail;
+        const parts: string[] = [];
+        
+        if (d.name) parts.push(`Nama: ${d.name}`);
+        if (d.targetPH) parts.push(`Target pH: ${d.targetPH}`);
+        if (d.maxHeight) parts.push(`Tinggi: ${d.maxHeight}cm`);
+        if (d.mode) parts.push(`Mode: ${d.mode}`);
+        if (d.role) parts.push(`Role: ${d.role.toUpperCase()}`);
+        if (d.newRole) parts.push(`Role: ${d.newRole.toUpperCase()}`);
+        if (d.ownerCode) parts.push(`Owner Code: ${d.ownerCode}`);
+        if (d.targetUserId) parts.push(`User ID: ${d.targetUserId.substring(0, 8)}...`);
+        
+        return parts.length > 0 ? parts.join(' • ') : JSON.stringify(d);
+    } catch {
+        return String(detail);
+    }
+}
 
 export default function ActivityLog({ activities }: { activities: Activity[] }) {
     const [currentPage, setCurrentPage] = useState(1);
@@ -88,7 +115,7 @@ export default function ActivityLog({ activities }: { activities: Activity[] }) 
                                     </div>
                                 </div>
                                 <div className="text-[10px] bg-gray-50 px-2 py-1 rounded border border-gray-100 max-w-[200px] truncate">
-                                    {JSON.stringify(activity.detail)}
+                                    {formatDetail(activity.detail)}
                                 </div>
                             </div>
                         </div>
