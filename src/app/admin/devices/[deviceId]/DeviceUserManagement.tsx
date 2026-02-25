@@ -13,7 +13,9 @@ import {
     Eye,
     Plus,
     X,
-    Users
+    Users,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { showConfirm, showSuccess, showError, showLoading, closeSwal } from '@/lib/swal';
 import {
@@ -61,12 +63,12 @@ export default function DeviceUserManagement({
     const [selectedRole, setSelectedRole] = useState<'owner' | 'viewer'>('viewer');
 
     const handleRemove = async (userId: string, name: string) => {
-        const confirmed = await showConfirm(
+        const result = await showConfirm(
             `Lepaskan Pengguna?`,
             `${name} tidak akan lagi memiliki akses ke alat ini.`
         );
 
-        if (confirmed) {
+        if (result.isConfirmed) {
             showLoading('Melepas pengguna...');
             startTransition(async () => {
                 const res = await adminRemoveDeviceUser(deviceId, userId);
@@ -96,6 +98,15 @@ export default function DeviceUserManagement({
             }
         });
     };
+
+    // === PAGINATION LOGIC ===
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(deviceUsers.length / itemsPerPage);
+    const paginatedUsers = deviceUsers.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
 
     return (
         <div className="space-y-4">
@@ -169,7 +180,7 @@ export default function DeviceUserManagement({
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {deviceUsers.map((item) => (
+                        {paginatedUsers.map((item) => (
                             <TableRow key={item.userId}>
                                 <TableCell>
                                     <div className="flex items-center gap-2">
@@ -214,6 +225,38 @@ export default function DeviceUserManagement({
                         ))}
                     </TableBody>
                 </Table>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-2 py-4 border-t border-gray-50">
+                        <p className="text-xs text-gray-400">
+                            Menampilkan <span className="font-bold text-gray-600">{paginatedUsers.length}</span> dari <span className="font-bold text-gray-600">{deviceUsers.length}</span> pengguna
+                        </p>
+                        <div className="flex gap-1">
+                            <Button
+                                variant="outline"
+                                size="icon-sm"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="h-7 w-7"
+                            >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                            </Button>
+                            <div className="flex items-center px-3 text-[10px] font-bold text-gray-500 bg-gray-50 rounded-md border">
+                                {currentPage} / {totalPages}
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="icon-sm"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="h-7 w-7"
+                            >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
                 {deviceUsers.length === 0 && (
                     <div className="p-8 text-center bg-gray-50/50 rounded-xl border border-dashed border-gray-200 mt-2">
                         <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />

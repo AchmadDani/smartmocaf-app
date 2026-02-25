@@ -104,6 +104,8 @@ model DeviceSettings {
   deviceId         String   @id @map("device_id")
   targetPh         Decimal  @default(4.5) @map("target_ph") @db.Decimal(4, 2)
   autoDrainEnabled Boolean  @default(false) @map("auto_drain_enabled")
+  maxHeight        Int      @default(50) @map("max_height")
+  telegramChatId   String?  @map("telegram_chat_id")
   updatedAt        DateTime @default(now()) @updatedAt @map("updated_at")
   device           Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
 

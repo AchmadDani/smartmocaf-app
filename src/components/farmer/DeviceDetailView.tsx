@@ -48,7 +48,7 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                         <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => router.push(readonly ? '/admin/devices' : '/farmer')}
+                            onClick={() => router.back()}
                             className="h-10 w-10 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-100 transition-all group"
                         >
                             <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-primary transition-colors" />
@@ -84,7 +84,7 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                                     <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
                                     <div className="flex items-center gap-1.5">
                                         <Clock className="h-3 w-3" />
-                                        <span>Aktif {new Date(device.createdAt).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}</span>
+                                        <span>Aktif {device.createdAt ? new Date(device.createdAt).toLocaleDateString('id-ID', { month: 'short', year: 'numeric' }) : '-'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -100,11 +100,11 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                 <Tabs defaultValue="monitoring" className="flex-1 flex flex-col pt-10">
                     <div className="px-6 mb-10">
                         <TabsList className="w-full h-14 bg-gray-200/30 p-1.5 rounded-[1.75rem] border border-gray-100/50 backdrop-blur-sm">
-                            <TabsTrigger value="monitoring" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2.5 data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.06)] data-[state=active]:text-primary transition-all duration-300">
+                            <TabsTrigger value="monitoring" className="flex-1 rounded-[1.25rem] text-xs sm:text-sm uppercase tracking-widest font-black gap-2.5 data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.06)] data-[state=active]:text-primary transition-all duration-300">
                                 <Activity className="h-4 w-4" />
                                 Real-time Monitoring
                             </TabsTrigger>
-                            <TabsTrigger value="history" className="flex-1 rounded-[1.25rem] text-[10px] uppercase tracking-widest font-black gap-2.5 data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.06)] data-[state=active]:text-primary transition-all duration-300">
+                            <TabsTrigger value="history" className="flex-1 rounded-[1.25rem] text-xs sm:text-sm uppercase tracking-widest font-black gap-2.5 data-[state=active]:bg-white data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.06)] data-[state=active]:text-primary transition-all duration-300">
                                 <History className="h-4 w-4" />
                                 Batch History
                             </TabsTrigger>

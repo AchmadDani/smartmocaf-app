@@ -83,9 +83,9 @@ export default async function FarmerDashboardPage() {
             statusDisplay,
             statusColor,
             mode: latestRun?.mode || 'auto',
-            temp: latestTelemetry?.tempC ? Number(latestTelemetry.tempC) : '--',
-            ph: latestTelemetry?.ph ? Number(latestTelemetry.ph) : '--',
-            waterLevel: latestTelemetry?.waterLevel ?? '--',
+            temp: latestTelemetry?.tempC ? Number(latestTelemetry.tempC) : 0,
+            ph: latestTelemetry?.ph ? Number(latestTelemetry.ph) : 0,
+            waterLevel: latestTelemetry?.waterLevel ?? 0,
             isOnline: device.isOnline
         } as any;
     });

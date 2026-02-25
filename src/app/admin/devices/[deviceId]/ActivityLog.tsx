@@ -1,3 +1,5 @@
+'use client';
+
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, 
@@ -6,8 +8,12 @@ import {
   UserPlus, 
   UserMinus, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface Activity {
     id: string;
@@ -31,6 +37,14 @@ const ACTION_MAP: Record<string, { label: string, color: string, icon: any }> = 
 };
 
 export default function ActivityLog({ activities }: { activities: Activity[] }) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 5;
+    const totalPages = Math.ceil(activities.length / itemsPerPage);
+    const paginatedActivities = activities.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+
     return (
         <div className="space-y-4">
             {activities.length === 0 && (
@@ -40,7 +54,7 @@ export default function ActivityLog({ activities }: { activities: Activity[] }) 
             )}
             
             <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
-                {activities.map((activity) => {
+                {paginatedActivities.map((activity) => {
                     const config = ACTION_MAP[activity.action] || { label: activity.action, color: 'outline', icon: AlertCircle };
                     const Icon = config.icon;
 
@@ -81,6 +95,38 @@ export default function ActivityLog({ activities }: { activities: Activity[] }) 
                     );
                 })}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between px-2 pt-4 border-t border-gray-50 mt-4">
+                    <p className="text-[10px] text-gray-400">
+                        Menampilkan <span className="font-bold text-gray-600">{paginatedActivities.length}</span> dari <span className="font-bold text-gray-600">{activities.length}</span> aktivitas
+                    </p>
+                    <div className="flex gap-1">
+                        <Button
+                            variant="outline"
+                            size="icon-sm"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="h-7 w-7"
+                        >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                        </Button>
+                        <div className="flex items-center px-3 text-[10px] font-bold text-gray-500 bg-gray-50 rounded-md border">
+                            {currentPage} / {totalPages}
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="icon-sm"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="h-7 w-7"
+                        >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

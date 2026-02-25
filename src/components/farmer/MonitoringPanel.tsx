@@ -54,9 +54,11 @@ interface MonitoringPanelProps {
     settings: {
         target_ph: number;
         auto_drain_enabled: boolean;
+        max_height?: number;
+        telegram_chat_id?: string;
     };
     role: 'OWNER' | 'VIEWER';
-    mode?: 'auto' | 'manual' | 'test' | 'TEST'; // Updated type
+    mode?: 'auto' | 'manual' | 'test' | 'TEST' | 'MANUAL'; // Updated type
     isOnline?: boolean;
     readonly?: boolean;
 }
@@ -83,20 +85,20 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
         const topic = `growify/${mqttDeviceId}/sensors`;
         const data = lastMessages[topic];
         if (data) {
-            setLiveTelemetry({
-                ph: data.ph ?? liveTelemetry?.ph,
-                temp_c: data.temp ?? liveTelemetry?.temp_c,
-                water_level: data.water_level ?? liveTelemetry?.water_level,
-                relay: data.relay ?? liveTelemetry?.relay,
-                mode: data.mode ?? liveTelemetry?.mode,
-                status: data.status ?? liveTelemetry?.status,
-                uptime_s: data.uptime_s ?? liveTelemetry?.uptime_s,
-                stable_time_s: data.stable_time_s ?? liveTelemetry?.stable_time_s,
-            });
+            setLiveTelemetry(prev => ({
+                ph: data.ph ?? prev?.ph,
+                temp_c: data.temp ?? prev?.temp_c,
+                water_level: data.water_level ?? prev?.water_level,
+                relay: data.relay ?? prev?.relay,
+                mode: data.mode ?? prev?.mode,
+                status: data.status ?? prev?.status,
+                uptime_s: data.uptime_s ?? prev?.uptime_s,
+                stable_time_s: data.stable_time_s ?? prev?.stable_time_s,
+            }));
             if (data.mode) setLiveMode(data.mode);
             setIsDeviceOnline(true);
         }
-    }, [lastMessages, mqttDeviceId, liveTelemetry]);
+    }, [lastMessages, mqttDeviceId]);
 
     const handleStart = async () => {
         const result = await showConfirm(
@@ -105,7 +107,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             'Ya, Mulai'
         );
         
-        if (result) {
+        if (result.isConfirmed) {
             startTransition(async () => {
                 showLoading('Memulai fermentasi...');
                 try {
@@ -127,7 +129,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             'Ya, Selesai'
         );
         
-        if (result) {
+        if (result.isConfirmed) {
             startTransition(async () => {
                 showLoading('Menyelesaikan fermentasi...');
                 try {
@@ -149,7 +151,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             isOpen ? 'Ya, Buka' : 'Ya, Tutup'
         );
         
-        if (result) {
+        if (result.isConfirmed) {
             startTransition(async () => {
                 try {
                     await manualDrainToggle(deviceId, isOpen);
@@ -173,7 +175,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             'Ya, Ubah'
         );
 
-        if (result) {
+        if (result.isConfirmed) {
             setLiveMode(newMode);
             if (client) {
                 client.publish(`growify/${mqttDeviceId}/mode`, JSON.stringify({ mode: newMode }));
@@ -291,7 +293,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                                         'Mode ini akan membuka keran selama 15 detik JIKA pH < Target. Gunakan untuk simulasi drain.',
                                         'Ya, Test Drain'
                                     );
-                                    if (result) {
+                                    if (result.isConfirmed) {
                                         setLiveMode('TEST');
                                         if (client) {
                                             client.publish(`growify/${mqttDeviceId}/mode`, JSON.stringify({ mode: 'test' }));
@@ -323,12 +325,16 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                             liveTelemetry?.status === 'FERMENT' ? 'bg-blue-100 border-blue-200 text-blue-700' :
                             liveTelemetry?.status === 'STABLE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700' :
                             liveTelemetry?.status === 'DRAIN' ? 'bg-red-100 border-red-200 text-red-700' :
+                            liveTelemetry?.status === 'TEST' ? 'bg-purple-100 border-purple-200 text-purple-700' :
+                            liveTelemetry?.status === 'MANUAL' ? 'bg-amber-100 border-amber-200 text-amber-700' :
                             'bg-gray-100 border-gray-200 text-gray-600'
                         }`}>
                             <span className="text-[10px] font-black uppercase tracking-wider">
                                 {liveTelemetry?.status === 'FERMENT' ? 'FERMENTASI' :
                                  liveTelemetry?.status === 'STABLE' ? 'STABILISASI' :
-                                 liveTelemetry?.status === 'DRAIN' ? 'KURAS' : 'IDLE'}
+                                 liveTelemetry?.status === 'DRAIN' ? 'KURAS' :
+                                 liveTelemetry?.status === 'TEST' ? 'TEST MODE' :
+                                 liveTelemetry?.status === 'MANUAL' ? 'MANUAL' : 'IDLE'}
                             </span>
                         </div>
                         <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
@@ -377,23 +383,59 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 <div className="space-y-10 relative ml-3">
                     <div className="absolute left-4 top-2 bottom-2 w-px bg-gray-100" />
                     
-                    {[
-                        { label: 'Sterilisasi & Persiapan', desc: 'Tangki siap dan menunggu input bahan baku', icon: Circle, done: status !== 'idle' },
-                        { label: 'Inkubasi Aktif', desc: 'Monitoring sensor pH dan Suhu secara berkala', icon: Activity, active: status === 'running' },
-                        { label: 'Panen & Selesai', desc: 'Kualitas singkong siap untuk proses hilirisasi', icon: CheckCircle2, done: status === 'done' }
-                    ].map((step, i) => (
-                        <div key={i} className="flex items-start gap-6 relative group">
-                            <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center z-10 bg-white transition-all duration-500
-                                ${step.active ? 'border-primary shadow-[0_0_15px_rgba(34,197,94,0.3)] ring-4 ring-primary/10' : step.done ? 'border-primary bg-primary' : 'border-gray-50'}`}
-                            >
-                                {step.done ? <CheckCircle2 className="h-4 w-4 text-white" /> : <step.icon className={`h-4 w-4 ${step.active ? 'text-primary animate-pulse' : 'text-gray-100'}`} />}
+                    {(() => {
+                        // Determine step states from live MQTT status
+                        const liveStatus = liveTelemetry?.status || '';
+                        const isRunning = status === 'running' || ['FERMENT', 'STABLE', 'DRAIN'].includes(liveStatus);
+                        const isDone = status === 'done';
+                        const isFermenting = liveStatus === 'FERMENT';
+                        const isStabilizing = liveStatus === 'STABLE';
+                        const isDraining = liveStatus === 'DRAIN';
+                        
+                        const steps = [
+                            { 
+                                label: 'Sterilisasi & Persiapan', 
+                                desc: 'Tangki siap dan menunggu input bahan baku', 
+                                icon: Circle, 
+                                done: isRunning || isDone, 
+                                active: false 
+                            },
+                            { 
+                                label: 'Inkubasi Aktif', 
+                                desc: isFermenting 
+                                    ? 'Monitoring pH... Menunggu target tercapai' 
+                                    : isStabilizing 
+                                        ? `Stabilisasi pH${liveTelemetry?.stable_time_s ? ` (${Math.floor(liveTelemetry.stable_time_s / 60)}m)` : ''}` 
+                                        : 'Monitoring sensor pH dan Suhu secara berkala', 
+                                icon: Activity, 
+                                active: isFermenting || isStabilizing, 
+                                done: isDraining || isDone 
+                            },
+                            { 
+                                label: isDraining ? 'Sedang Menguras...' : 'Panen & Selesai', 
+                                desc: isDraining 
+                                    ? 'Keran terbuka, air sedang dibuang' 
+                                    : 'Kualitas singkong siap untuk proses hilirisasi', 
+                                icon: CheckCircle2, 
+                                active: isDraining, 
+                                done: isDone 
+                            }
+                        ];
+                        
+                        return steps.map((step, i) => (
+                            <div key={i} className="flex items-start gap-6 relative group">
+                                <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center z-10 bg-white transition-all duration-500
+                                    ${step.active ? 'border-primary shadow-[0_0_15px_rgba(34,197,94,0.3)] ring-4 ring-primary/10' : step.done ? 'border-primary bg-primary' : 'border-gray-50'}`}
+                                >
+                                    {step.done ? <CheckCircle2 className="h-4 w-4 text-white" /> : <step.icon className={`h-4 w-4 ${step.active ? 'text-primary animate-pulse' : 'text-gray-100'}`} />}
+                                </div>
+                                <div className="pt-0.5">
+                                    <p className={`text-base font-black tracking-tight ${step.active || step.done ? 'text-gray-900' : 'text-gray-300'}`}>{step.label}</p>
+                                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-1">{step.desc}</p>
+                                </div>
                             </div>
-                            <div className="pt-0.5">
-                                <p className={`text-base font-black tracking-tight ${step.active || step.done ? 'text-gray-900' : 'text-gray-300'}`}>{step.label}</p>
-                                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-1">{step.desc}</p>
-                            </div>
-                        </div>
-                    ))}
+                        ));
+                    })()}
                 </div>
             </div>
 
@@ -424,7 +466,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
             </div>
 
             {/* Manual Control (Only in Manual Mode) */}
-            {liveTelemetry?.mode === 'manual' && (
+            {(liveMode === 'manual' || liveMode === 'MANUAL' || liveTelemetry?.mode === 'manual') && (
                 <div className="mt-6 pt-6 border-t border-gray-100">
                     <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-3 uppercase tracking-widest">
                         <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -519,6 +561,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                                         name="height"
                                         type="number" 
                                         step="1" 
+                                        defaultValue={settings.max_height || 50}
                                         placeholder="50"
                                         className="h-16 text-center text-3xl font-black rounded-2xl border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all pr-12" 
                                     />
@@ -530,6 +573,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                                 <Input 
                                     name="chat_id"
                                     type="text" 
+                                    defaultValue={settings.telegram_chat_id || ''}
                                     placeholder="-45345..."
                                     className="h-16 text-center text-sm font-bold rounded-2xl border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all" 
                                 />

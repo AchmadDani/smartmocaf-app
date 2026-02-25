@@ -1,8 +1,18 @@
 'use client';
 
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LogoutButton from '@/components/LogoutButton';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useRouter } from 'next/navigation';
+import { showLogoutConfirm, showLoading } from '@/lib/swal';
 
 interface AdminHeaderProps {
     user: {
@@ -13,8 +23,24 @@ interface AdminHeaderProps {
 }
 
 export default function AdminHeader({ user, onMenuToggle }: AdminHeaderProps) {
+    const router = useRouter();
     const displayName = user.full_name || user.email?.split('@')[0] || 'Admin';
     const initial = displayName[0]?.toUpperCase() || 'A';
+
+    const handleLogout = async () => {
+        const result = await showLogoutConfirm();
+        if (result.isConfirmed) {
+            showLoading('Keluar...');
+            try {
+                const res = await fetch('/api/auth/logout', { method: 'POST' });
+                if (res.ok) {
+                    window.location.href = '/auth/login?message=logout_success';
+                }
+            } catch {
+                window.location.href = '/auth/login';
+            }
+        }
+    };
 
     return (
         <header className="bg-white/80 backdrop-blur-md px-6 sm:px-10 h-[88px] border-b border-gray-100/80 flex justify-between items-center sticky top-0 z-40 w-full shadow-[0_4px_24px_rgba(0,0,0,0.01)]">
@@ -49,24 +75,39 @@ export default function AdminHeader({ user, onMenuToggle }: AdminHeaderProps) {
                         <Bell className="h-5 w-5" />
                         <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm" />
                     </Button>
-                    <LogoutButton />
                 </div>
 
                 <div className="h-8 w-px bg-gray-100 hidden sm:block" />
 
-                <div className="flex items-center gap-4 group cursor-pointer">
-                    <div className="text-right hidden sm:block">
-                        <p className="text-sm font-black text-gray-900 tracking-tight group-hover:text-primary transition-colors">{displayName}</p>
-                        <p className="text-[10px] uppercase font-black tracking-widest text-gray-300">Administrator</p>
-                    </div>
-                    <div className="w-12 h-12 rounded-[1.1rem] bg-gray-50 flex items-center justify-center font-black text-sm text-gray-400 border border-gray-100 shadow-sm group-hover:shadow-lg group-hover:shadow-primary/10 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-300">
-                        {initial}
-                    </div>
-                </div>
+                {/* Profile Dropdown */}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="flex items-center gap-4 group cursor-pointer outline-none">
+                            <div className="text-right hidden sm:block">
+                                <p className="text-sm font-black text-gray-900 tracking-tight group-hover:text-primary transition-colors">{displayName}</p>
+                                <p className="text-[10px] uppercase font-black tracking-widest text-gray-300">Administrator</p>
+                            </div>
+                            <div className="w-12 h-12 rounded-[1.1rem] bg-gray-50 flex items-center justify-center font-black text-sm text-gray-400 border border-gray-100 shadow-sm group-hover:shadow-lg group-hover:shadow-primary/10 group-hover:border-primary/30 group-hover:bg-primary/5 group-hover:text-primary transition-all duration-300">
+                                {initial}
+                            </div>
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 border border-gray-100 shadow-xl shadow-gray-200/50">
+                        <DropdownMenuLabel className="px-3 py-2">
+                            <p className="text-sm font-black text-gray-900">{displayName}</p>
+                            <p className="text-[10px] text-gray-400 font-medium">{user.email || 'admin'}</p>
+                        </DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                            className="px-3 py-2.5 rounded-xl cursor-pointer text-red-500 focus:text-red-600 focus:bg-red-50 gap-3 font-bold"
+                            onClick={handleLogout}
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Keluar
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
         </header>
     );
 }
-
-
-

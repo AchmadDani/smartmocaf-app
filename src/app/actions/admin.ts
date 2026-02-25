@@ -212,3 +212,21 @@ export async function adminAddDeviceUser(deviceId: string, userId: string, role:
     }
 }
 
+export async function adminLogActivity(deviceId: string, action: string, detail: any) {
+    await requireAdmin();
+    try {
+        await prisma.deviceActivity.create({
+            data: {
+                deviceId,
+                action,
+                detail
+            }
+        });
+        revalidatePath(`/admin/devices/${deviceId}`);
+        return { success: true };
+    } catch (e: any) {
+        console.error('Error logging admin activity:', e);
+        return { error: 'Gagal mencatat aktivitas' };
+    }
+}
+

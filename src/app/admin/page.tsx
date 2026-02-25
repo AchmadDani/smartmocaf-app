@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import UptimeChart from '@/components/admin/UptimeChart';
+import RealtimeDeviceStats from '@/components/admin/RealtimeDeviceStats';
 import AutoRefresh from '@/components/AutoRefresh';
 import { formatTimeAgo } from '@/utils/date';
 
@@ -24,29 +25,58 @@ export default async function AdminPage() {
         prisma.user.count({ where: { role: 'farmer' } }),
         prisma.fermentationRun.count({ where: { status: 'running' } }),
         prisma.device.findMany({
-            select: {
-                name: true,
-                deviceCode: true,
-                isOnline: true,
-                lastSeen: true,
-                createdAt: true,
+            include: {
+                deviceUsers: {
+                    include: { user: { select: { fullName: true } } },
+                    where: { role: 'owner' }
+                },
+                telemetry: { orderBy: { createdAt: 'desc' }, take: 1 }
             },
             orderBy: { createdAt: 'desc' },
-            take: 8
+            take: 20
         })
     ]);
+
+    // Build realtime stats initial data
+    const realtimeDevices = devices.map((d: any) => {
+        const telem = d.telemetry?.[0];
+        const isOnline = d.isOnline;
+
+        let statusDisplay = 'Idle';
+        let statusColor = 'bg-gray-100 text-gray-600';
+        if (isOnline) {
+            statusDisplay = 'Online';
+            statusColor = 'bg-green-100 text-green-700';
+        } else {
+            statusDisplay = 'Offline';
+            statusColor = 'bg-red-100 text-red-600';
+        }
+
+        return {
+            id: d.id,
+            name: d.name,
+            device_code: d.deviceCode,
+            is_online: isOnline,
+            temp: telem ? Number(telem.tempC) : null,
+            ph: telem ? Number(telem.ph) : null,
+            waterLevel: telem?.waterLevel ?? null,
+            ownerName: d.deviceUsers?.[0]?.user?.fullName || null,
+            statusDisplay,
+            statusColor,
+            lastTelemetry: d.lastSeen?.toISOString() || null,
+        };
+    });
 
     // MQTT Status
     const mqttStatus = await prisma.mqttStatus.findFirst({
         orderBy: { lastUpdated: 'desc' }
     });
 
-    // Build uptime data for chart (simplified: use current online status as proxy)
+    // Build uptime data for chart (based on actual online status)
     const uptimeData = devices.map((d: any) => {
-        // Simple uptime calculation: if online, 100%; if last seen within 1h, 80%; etc.
         let uptimePercent = 0;
         if (d.isOnline) {
-            uptimePercent = 95 + Math.floor(Math.random() * 5); // 95-100% for online
+            uptimePercent = 100;
         } else if (d.lastSeen) {
             const hoursAgo = (Date.now() - new Date(d.lastSeen).getTime()) / (1000 * 60 * 60);
             if (hoursAgo < 1) uptimePercent = 80;
@@ -195,6 +225,15 @@ export default async function AdminPage() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Realtime Device Stats */}
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                <div className="p-4 sm:p-5 border-b border-gray-100">
+                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Monitor Perangkat (Realtime)</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Data langsung dari MQTT — termasuk suhu perangkat dan jarak sensor</p>
+                </div>
+                <RealtimeDeviceStats initialDevices={realtimeDevices} />
             </div>
 
             <AutoRefresh />

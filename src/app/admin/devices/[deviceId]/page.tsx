@@ -21,6 +21,7 @@ import Link from 'next/link';
 import DeviceUserManagement from './DeviceUserManagement';
 import DeviceSettingsForm from './DeviceSettingsForm';
 import ActivityLog from './ActivityLog';
+import AdminDeviceMqttCard from '@/components/admin/AdminDeviceMqttCard';
 
 export const revalidate = 0;
 
@@ -47,8 +48,7 @@ export default async function AdminDeviceDetailPage({ params }: { params: Promis
                         select: { fullName: true }
                     }
                 },
-                orderBy: { createdAt: 'desc' },
-                take: 20
+                orderBy: { createdAt: 'desc' }
             },
             settings: true,
             _count: {
@@ -121,9 +121,11 @@ export default async function AdminDeviceDetailPage({ params }: { params: Promis
                             <Separator />
                             <DeviceSettingsForm 
                                 deviceId={device.id} 
+                                deviceCode={device.deviceCode}
                                 initialMaxUsers={device.maxUsers} 
                                 currentSettings={device.settings ? {
-                                    targetPh: Number(device.settings.targetPh)
+                                    targetPh: Number(device.settings.targetPh),
+                                    maxHeight: (device.settings as any).maxHeight
                                 } as any : null}
                             />
                         </CardContent>
@@ -138,9 +140,7 @@ export default async function AdminDeviceDetailPage({ params }: { params: Promis
                             <CardDescription>Status sensor perangkat saat ini</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-200 text-center">
-                                <p className="text-xs text-gray-400 italic">MQTT Real-time preview akan muncul di sini</p>
-                            </div>
+                            <AdminDeviceMqttCard deviceCode={device.deviceCode} deviceId={device.id} />
                         </CardContent>
                     </Card>
                 </div>

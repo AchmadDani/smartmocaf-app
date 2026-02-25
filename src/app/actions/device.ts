@@ -112,19 +112,24 @@ export async function createDeviceCommand(
     });
 }
 
-export async function updateDeviceSettings(deviceId: string, settings: { target_ph?: number; auto_drain_enabled?: boolean }) {
+export async function updateDeviceSettings(deviceId: string, settings: { target_ph?: number; auto_drain_enabled?: boolean; max_height?: number; telegram_chat_id?: string }) {
     const userId = await checkDeviceAccess(deviceId, 'owner');
+
+    const updateData: any = {};
+    if (settings.target_ph !== undefined) updateData.targetPh = settings.target_ph;
+    if (settings.auto_drain_enabled !== undefined) updateData.autoDrainEnabled = settings.auto_drain_enabled;
+    if (settings.max_height !== undefined) updateData.maxHeight = settings.max_height;
+    if (settings.telegram_chat_id !== undefined) updateData.telegramChatId = settings.telegram_chat_id;
 
     const currentSettings = await prisma.deviceSettings.upsert({
         where: { deviceId },
-        update: {
-            targetPh: settings.target_ph,
-            autoDrainEnabled: settings.auto_drain_enabled
-        },
+        update: updateData,
         create: {
             deviceId,
             targetPh: settings.target_ph ?? 4.5,
-            autoDrainEnabled: settings.auto_drain_enabled ?? false
+            autoDrainEnabled: settings.auto_drain_enabled ?? false,
+            maxHeight: settings.max_height ?? 50,
+            telegramChatId: settings.telegram_chat_id ?? null,
         }
     });
 
@@ -147,6 +152,8 @@ export async function updateDeviceSettings(deviceId: string, settings: { target_
     await createDeviceCommand(deviceId, 'SETTINGS_UPDATE', {
         target_ph: Number(currentSettings.targetPh),
         auto_drain_enabled: currentSettings.autoDrainEnabled,
+        max_height: currentSettings.maxHeight,
+        telegram_chat_id: currentSettings.telegramChatId,
         telemetry: telemetryConfig
     });
 

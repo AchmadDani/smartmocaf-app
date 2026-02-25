@@ -111,7 +111,9 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
             } as any}
             settings={{
                 target_ph: Number(settings.targetPh),
-                auto_drain_enabled: settings.autoDrainEnabled
+                auto_drain_enabled: settings.autoDrainEnabled,
+                max_height: settings.maxHeight ?? 50,
+                telegram_chat_id: settings.telegramChatId ?? '',
             } as any}
             status={status as any}
             telemetry={telemetry as any}

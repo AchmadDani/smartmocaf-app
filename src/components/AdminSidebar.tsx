@@ -136,6 +136,18 @@ export default function AdminSidebar({ isOpen, isCollapsed, onClose, onToggleCol
                     })}
                 </nav>
 
+                {/* Logout Section */}
+                <div className={`p-4 border-t border-gray-50/50 ${isCollapsed ? 'flex justify-center' : ''}`}>
+                    <LogoutButton 
+                        className={`
+                            w-full flex items-center gap-4 rounded-2xl transition-all duration-300 h-12 group/logout
+                            text-gray-400 hover:bg-red-50 hover:text-red-500
+                            ${isCollapsed ? 'justify-center px-0' : 'px-4'}
+                        `}
+                    >
+                        {!isCollapsed && 'Keluar'}
+                    </LogoutButton>
+                </div>
             </aside>
         </>
     );
