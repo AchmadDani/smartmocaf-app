@@ -1,0 +1,359 @@
+================================================================================
+          ANALISIS TECH STACK - SmartMocaf App (smartmocaf-app)
+================================================================================
+Tanggal Analisis : 26 Februari 2026
+Versi Aplikasi   : 0.1.0
+Tipe Aplikasi    : IoT Web Dashboard untuk monitoring & kontrol fermentasi mocaf
+================================================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. FRAMEWORK & RUNTIME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Next.js             │ Versi 16.1.3 (App Router)                              │
+│                     │ - Full-stack React framework                            │
+│                     │ - Server-Side Rendering (SSR)                           │
+│                     │ - Server Components (RSC) diaktifkan                    │
+│                     │ - API Route Handlers (src/app/api/)                     │
+│                     │ - Server Actions (src/app/actions/)                     │
+│                     │ - File-based routing dengan App Router                  │
+│                     │ - Middleware support                                     │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ React               │ Versi 19.2.3                                            │
+│                     │ - Library utama untuk UI rendering                       │
+│                     │ - React DOM 19.2.3                                       │
+│                     │ - Hooks (useState, useEffect, useContext, dll.)          │
+│                     │ - Context API untuk state management (MqttProvider)      │
+│                     │ - Client & Server Components                             │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Node.js             │ Runtime environment untuk server-side                    │
+│                     │ - Menjalankan Next.js dev server & production build      │
+│                     │ - Menjalankan script utilitas (scripts/)                 │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. BAHASA PEMROGRAMAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ TypeScript          │ Versi ^5 (Bahasa Utama)                                 │
+│                     │ - Strict mode diaktifkan                                 │
+│                     │ - Target kompilasi: ES2017                               │
+│                     │ - Module resolution: bundler                             │
+│                     │ - JSX: react-jsx                                         │
+│                     │ - Path alias: @/* → ./src/*                              │
+│                     │ - File ekstensi: .ts, .tsx, .mts                         │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ JavaScript          │ Digunakan untuk utility scripts (scripts/*.js)           │
+│                     │ - check-data.js (pengecekan data)                        │
+│                     │ - iot-sim.js (simulasi perangkat IoT)                    │
+│                     │ - seed-device-users.js (seeding data pengguna)           │
+│                     │ - test-webhook.js (testing webhook MQTT)                 │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. DATABASE & ORM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ MySQL               │ Database utama (via mysql2 ^3.16.3)                     │
+│                     │ - Relational database                                    │
+│                     │ - Diakses melalui Prisma ORM                            │
+│                     │ - Connection string: DATABASE_URL di .env                │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Prisma ORM          │ Versi ^6.19.2                                            │
+│                     │ - @prisma/client untuk query database                    │
+│                     │ - Schema-first approach (prisma/schema.prisma)           │
+│                     │ - Database migrations (prisma/migrations/)               │
+│                     │ - Seed script (prisma/seed.ts)                           │
+│                     │ - Prisma Client singleton pattern (src/lib/prisma.ts)    │
+│                     │                                                          │
+│                     │ Model-model yang ada:                                    │
+│                     │   • User         - Manajemen pengguna (admin/farmer)     │
+│                     │   • Device       - Perangkat IoT fermentasi              │
+│                     │   • DeviceUser   - Relasi many-to-many user-device       │
+│                     │   • DeviceActivity - Log aktivitas perangkat             │
+│                     │   • DeviceSettings - Konfigurasi perangkat               │
+│                     │   • DeviceCommand  - Antrian perintah ke perangkat       │
+│                     │   • FermentationRun - Sesi fermentasi                    │
+│                     │   • Telemetry      - Data sensor real-time               │
+│                     │   • TelemetryHistory - Data historis agregat             │
+│                     │   • MqttStatus     - Status topik MQTT                   │
+│                     │                                                          │
+│                     │ Enum yang digunakan:                                     │
+│                     │   • Role (admin, farmer)                                 │
+│                     │   • RunStatus (idle, running, done)                      │
+│                     │   • RunMode (auto, manual)                               │
+│                     │   • CommandStatus (queued, sent, executed)               │
+│                     │   • DeviceRole (owner, viewer)                           │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. AUTENTIKASI & KEAMANAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ JSON Web Token      │ jsonwebtoken ^9.0.3 + jose ^6.1.3                       │
+│ (JWT)               │ - Custom authentication system                          │
+│                     │ - Token disimpan di HTTP-only cookie                     │
+│                     │ - Masa berlaku token: 7 hari                             │
+│                     │ - JWT_SECRET dari environment variable                   │
+│                     │ - jose digunakan untuk JWT di edge runtime               │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ bcryptjs            │ Versi ^3.0.3                                             │
+│                     │ - Hashing password dengan salt rounds: 10                │
+│                     │ - Verifikasi password saat login                         │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Cookie-based Auth   │ - Session management via HTTP-only cookies               │
+│                     │ - Secure flag di production                              │
+│                     │ - SameSite: lax                                          │
+│                     │ - Role-based access (admin & farmer)                     │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ UUID                │ uuid ^13.0.0                                             │
+│                     │ - Untuk generate unique identifier pada entitas          │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. IoT & KOMUNIKASI REAL-TIME
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ MQTT                │ mqtt.js ^5.14.1                                          │
+│                     │ - Protokol messaging untuk perangkat IoT                 │
+│                     │ - Koneksi via WebSocket Secure (WSS)                     │
+│                     │ - Broker: EMQX Cloud (Asia Southeast 1)                  │
+│                     │   Host: wss://g0d76118.ala.asia-southeast1.emqxsl.com   │
+│                     │   Port: 8084                                             │
+│                     │ - Auto-reconnect setiap 5 detik                          │
+│                     │ - MqttProvider (React Context) untuk state management    │
+│                     │ - Publish/Subscribe pattern                              │
+│                     │ - Digunakan untuk:                                       │
+│                     │   • Menerima data sensor (pH, suhu, level air)           │
+│                     │   • Mengirim perintah ke perangkat (valve, mode)          │
+│                     │   • Monitoring status online/offline perangkat            │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ MQTT Webhook API    │ API endpoint: src/app/api/mqtt-webhook/                  │
+│                     │ - Menerima data dari MQTT broker via HTTP webhook         │
+│                     │ - Menyimpan data telemetri ke database                   │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. UI LIBRARY & STYLING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Tailwind CSS        │ Versi ^4                                                 │
+│                     │ - Utility-first CSS framework                            │
+│                     │ - PostCSS plugin: @tailwindcss/postcss ^4                │
+│                     │ - CSS Variables untuk theming                            │
+│                     │ - Global styles: src/app/globals.css                     │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ shadcn/ui           │ Component library (New York style)                       │
+│                     │ - RSC (React Server Components) kompatibel               │
+│                     │ - Base color: neutral                                    │
+│                     │ - CSS Variables untuk theming                            │
+│                     │ - Komponen yang terinstal (14 komponen):                  │
+│                     │   • Avatar       • Badge        • Button                 │
+│                     │   • Card         • Dialog       • Dropdown Menu          │
+│                     │   • Input        • Label        • Select                 │
+│                     │   • Separator    • Sheet        • Switch                 │
+│                     │   • Table        • Tabs                                  │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Radix UI            │ Headless UI primitives (foundation of shadcn/ui)         │
+│                     │ - @radix-ui/react-avatar ^1.1.11                         │
+│                     │ - @radix-ui/react-dialog ^1.1.15                         │
+│                     │ - @radix-ui/react-dropdown-menu ^2.1.16                  │
+│                     │ - @radix-ui/react-label ^2.1.8                           │
+│                     │ - @radix-ui/react-select ^2.2.6                          │
+│                     │ - @radix-ui/react-separator ^1.1.8                       │
+│                     │ - @radix-ui/react-slot ^1.2.4                            │
+│                     │ - @radix-ui/react-tabs ^1.1.13                           │
+│                     │ - @radix-ui/react-tooltip ^1.2.8                         │
+│                     │ - radix-ui ^1.4.3 (meta package)                         │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Lucide React        │ Versi ^0.563.0                                           │
+│                     │ - Icon library utama aplikasi                            │
+│                     │ - Diintegrasikan dengan shadcn/ui                        │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ SweetAlert2         │ Versi ^11.26.17                                          │
+│                     │ - Library popup/alert kustom                             │
+│                     │ - Digunakan untuk notifikasi & konfirmasi aksi           │
+│                     │ - Konfigurasi kustom: src/lib/swal.ts                    │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ CSS Utility Libs    │ - class-variance-authority (CVA) ^0.7.1                  │
+│                     │   → Untuk membuat variant-based component styles          │
+│                     │ - clsx ^2.1.1                                             │
+│                     │   → Conditional className utility                        │
+│                     │ - tailwind-merge ^3.4.0                                   │
+│                     │   → Merge Tailwind classes tanpa konflik                  │
+│                     │ - Utility function: cn() di src/lib/utils.ts              │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. STATE MANAGEMENT & UTILITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ React Context API   │ - MqttProvider untuk MQTT state management              │
+│                     │ - Custom hooks (useMqtt)                                 │
+│                     │ - Diletakkan di src/hooks/                               │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ use-debounce        │ Versi ^10.1.0                                            │
+│                     │ - Debounce utility untuk input/event handling            │
+│                     │ - Optimasi performa pencarian & form                     │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ dotenv              │ Versi ^17.2.3                                            │
+│                     │ - Memuat environment variables dari file .env             │
+│                     │ - Konfigurasi: database, JWT secret, dll.                │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. DEVELOPMENT TOOLS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Teknologi           │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ ESLint              │ Versi ^9                                                 │
+│                     │ - eslint-config-next 16.1.3                              │
+│                     │ - Core Web Vitals rules                                  │
+│                     │ - TypeScript rules                                       │
+│                     │ - Flat config format (eslint.config.mjs)                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ PostCSS             │ postcss.config.mjs                                       │
+│                     │ - Plugin: @tailwindcss/postcss                            │
+│                     │ - CSS processing pipeline                                │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ TypeScript Types    │ Dev dependencies:                                        │
+│                     │ - @types/bcryptjs ^2.4.6                                 │
+│                     │ - @types/jsonwebtoken ^9.0.10                             │
+│                     │ - @types/node ^20                                         │
+│                     │ - @types/react ^19                                        │
+│                     │ - @types/react-dom ^19                                    │
+│                     │ - @types/uuid ^10.0.0                                    │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Git                 │ Version control (.git/ & .gitignore)                     │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ npm                 │ Package manager (package-lock.json)                      │
+│                     │ - Scripts: dev, build, start, lint                        │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. ARSITEKTUR APLIKASI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Aspek               │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Routing             │ Next.js App Router (file-based routing)                  │
+│                     │ Halaman utama:                                           │
+│                     │   / .................. Landing page                       │
+│                     │   /auth .............. Halaman login & register           │
+│                     │   /admin ............. Dashboard admin                    │
+│                     │   /admin/devices ..... Manajemen perangkat                │
+│                     │   /admin/devices/[id]  Detail perangkat                   │
+│                     │   /admin/users ....... Manajemen pengguna                 │
+│                     │   /admin/device ...... Monitoring perangkat               │
+│                     │   /farmer ............ Dashboard petani                   │
+│                     │   /farmer/[deviceId] . Monitoring perangkat petani        │
+│                     │   /farmer/history .... Histori data                       │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ API Routes          │ src/app/api/                                             │
+│                     │   • /api/auth/* ........ Authentication endpoints         │
+│                     │   • /api/mqtt-webhook .. Webhook untuk data MQTT          │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Server Actions      │ src/app/actions/                                         │
+│                     │   • admin.ts ........... Aksi admin (CRUD perangkat/user) │
+│                     │   • auth.ts ............ Aksi autentikasi                 │
+│                     │   • device.ts .......... Aksi perangkat & telemetri       │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Layout System       │ Nested layouts:                                          │
+│                     │   • Root layout (src/app/layout.tsx)                      │
+│                     │   • Admin layout (src/app/admin/layout.tsx)               │
+│                     │   • Farmer layout (implicit)                              │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Komponen Kustom     │ src/components/ (11+ komponen):                          │
+│                     │   • AdminHeader    - Header navigasi admin                │
+│                     │   • AdminSidebar   - Sidebar navigasi admin              │
+│                     │   • AdminShell     - Shell/wrapper layout admin           │
+│                     │   • AuthForm       - Form login & registrasi             │
+│                     │   • DeviceCard     - Card tampilan perangkat              │
+│                     │   • MqttProvider   - Provider koneksi MQTT               │
+│                     │   • AddDeviceDialog - Dialog tambah perangkat             │
+│                     │   • AddUserDialog   - Dialog tambah pengguna              │
+│                     │   • LogoutButton         - Tombol logout                  │
+│                     │   • LogoutConfirmationDialog - Konfirmasi logout          │
+│                     │   • AutoRefresh    - Auto-refresh data                    │
+│                     │   • farmer/*       - Komponen khusus petani (4 files)     │
+│                     │   • admin/*        - Komponen khusus admin (4 files)      │
+│                     │   • auth/*         - Komponen khusus auth (2 files)       │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ Role-Based Access   │ 2 role:                                                  │
+│                     │   • admin  → Akses penuh (CRUD device, user, settings)   │
+│                     │   • farmer → Monitoring & kontrol perangkat sendiri       │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. INFRASTRUKTUR & SERVICES PIHAK KETIGA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────────────────────────────────────┐
+│ Service             │ Detail                                                 │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ EMQX Cloud          │ Managed MQTT Broker                                      │
+│                     │ - Region: Asia Southeast 1                               │
+│                     │ - Protokol: WSS (WebSocket Secure)                       │
+│                     │ - Port: 8084                                              │
+│                     │ - Digunakan untuk komunikasi real-time IoT               │
+├─────────────────────┼──────────────────────────────────────────────────────────┤
+│ MySQL Server        │ Database server (lokal atau remote)                      │
+│                     │ - Default: localhost:3306                                 │
+│                     │ - Database: smartmocaf_db                                │
+└─────────────────────┴──────────────────────────────────────────────────────────┘
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+11. RINGKASAN TECH STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Frontend  : Next.js 16 + React 19 + TypeScript 5
+  Styling   : Tailwind CSS 4 + shadcn/ui (New York) + Radix UI
+  Backend   : Next.js API Routes + Server Actions
+  Database  : MySQL (via Prisma ORM 6)
+  Auth      : Custom JWT + bcryptjs (cookie-based session)
+  IoT       : MQTT via EMQX Cloud (WebSocket Secure)
+  Icons     : Lucide React
+  Alerts    : SweetAlert2
+  Linting   : ESLint 9 + eslint-config-next
+  Runtime   : Node.js
+  VCS       : Git
+  Package   : npm
+
+================================================================================
+                         END OF TECH STACK ANALYSIS
+================================================================================
