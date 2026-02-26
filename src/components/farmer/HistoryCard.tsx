@@ -21,6 +21,8 @@ import { Separator } from '@/components/ui/separator';
 
 interface HistoryItem {
     id: string;
+    name?: string;
+    cassavaAmount?: number;
     startedAt: string;
     endedAt: string;
     before: {
@@ -46,20 +48,15 @@ export default function HistoryCard({ item }: HistoryCardProps) {
     const startDate = new Date(item.startedAt);
     const endDate = new Date(item.endedAt);
 
-    const dateStr = startDate.toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
+    const formatDate = (date: Date) => date.toLocaleDateString('id-ID', {
+        day: 'numeric', month: 'short', year: 'numeric'
+    });
+    const formatTime = (date: Date) => date.toLocaleTimeString('id-ID', {
+        hour: '2-digit', minute: '2-digit', hour12: false
     });
 
-    const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        });
-    };
-
+    const startDateStr = formatDate(startDate);
+    const endDateStr = formatDate(endDate);
     const startTimeStr = formatTime(startDate);
     const endTimeStr = formatTime(endDate);
 
@@ -70,7 +67,6 @@ export default function HistoryCard({ item }: HistoryCardProps) {
     const toggleExpand = async () => {
         const newExpanded = !isExpanded;
         setIsExpanded(newExpanded);
-
         if (newExpanded && !loaded && !loading) {
             setLoading(true);
             try {
@@ -91,28 +87,44 @@ export default function HistoryCard({ item }: HistoryCardProps) {
                 className="p-4 sm:p-6 lg:p-8 cursor-pointer active:scale-[0.99] transition-transform"
                 onClick={toggleExpand}
             >
+                {/* Header with Date Range */}
                 <div className="flex justify-between items-start mb-4 sm:mb-6 lg:mb-8">
                     <div className="flex items-start gap-3 sm:gap-4 lg:gap-5">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-sm transition-transform group-hover:scale-110 duration-500">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-sm transition-transform group-hover:scale-110 duration-500 flex-shrink-0">
                             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 lg:h-7 lg:w-7" />
                         </div>
-                        <div>
-                            <h4 className="text-base sm:text-lg lg:text-xl font-black text-gray-900 tracking-tight leading-none mb-1 sm:mb-2">{dateStr}</h4>
-                            <div className="flex items-center gap-2 sm:gap-3">
-                                <span className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-1 sm:gap-2">
-                                    <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {startTimeStr} — {endTimeStr}
-                                </span>
-                                <Badge variant="secondary" className="text-[8px] sm:text-[9px] font-black tracking-widest px-1.5 sm:px-2.5 py-0.5 h-4 sm:h-5 uppercase rounded-lg bg-gray-100/80 text-gray-500">
-                                    {durationHours}j {durationMinutes}m
-                                </Badge>
+                        <div className="min-w-0">
+                            <h4 className="text-sm sm:text-base lg:text-lg font-black text-gray-900 tracking-tight leading-snug mb-1.5">
+                                {item.name || 'Fermentasi'}
+                            </h4>
+                            <div className="flex flex-col gap-1.5">
+                                {/* Date Range */}
+                                <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] font-bold text-gray-500 flex-wrap">
+                                    <Clock className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                    <span className="font-black">{startDateStr}, {startTimeStr}</span>
+                                    <ArrowRight className="h-3 w-3 text-gray-300 flex-shrink-0" />
+                                    <span className="font-black">{endDateStr}, {endTimeStr}</span>
+                                </div>
+                                {/* Badges */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant="secondary" className="text-[8px] sm:text-[9px] font-black tracking-widest px-2 py-0.5 h-5 uppercase rounded-lg bg-primary/10 text-primary border border-primary/20">
+                                        {durationHours}j {durationMinutes}m
+                                    </Badge>
+                                    {item.cassavaAmount && (
+                                        <Badge variant="secondary" className="text-[8px] sm:text-[9px] font-black tracking-widest px-2 py-0.5 h-5 uppercase rounded-lg bg-amber-50 text-amber-600 border border-amber-100">
+                                            {item.cassavaAmount} KG
+                                        </Badge>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 lg:h-11 lg:w-11 rounded-xl sm:rounded-2xl group-hover:bg-primary/5 transition-all border border-transparent group-hover:border-primary/10">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 lg:h-11 lg:w-11 rounded-xl sm:rounded-2xl group-hover:bg-primary/5 transition-all border border-transparent group-hover:border-primary/10 flex-shrink-0">
                         {isExpanded ? <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 text-primary" /> : <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-300 group-hover:translate-x-0.5 transition-transform" />}
                     </Button>
                 </div>
 
+                {/* pH Before / After Grid */}
                 <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:gap-8 relative">
                     {/* Visual Connector */}
                     <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 rounded-xl sm:rounded-2xl bg-white border border-gray-100 z-10 flex items-center justify-center shadow-lg shadow-gray-200/50 transition-transform group-hover:scale-110 hidden sm:flex">
@@ -178,7 +190,7 @@ export default function HistoryCard({ item }: HistoryCardProps) {
                         <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center">
                              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                         </div>
-                        <h5 className="font-black text-gray-900 text-[9px] sm:text-[10px] tracking-[0.25em] uppercase">Detailed Batch Timeline</h5>
+                        <h5 className="font-black text-gray-900 text-[9px] sm:text-[10px] tracking-[0.25em] uppercase">Detail Timeline Batch</h5>
                     </div>
 
                     {loading ? (
@@ -223,13 +235,3 @@ export default function HistoryCard({ item }: HistoryCardProps) {
         </Card>
     );
 }
-
-// Help type for the timeline data based on actual model
-type TimelinePoint = {
-    id: string;
-    ph: number;
-    tempC: number;
-    createdAt: string;
-};
-
-

@@ -359,9 +359,14 @@ export async function getRunTimeline(runId: string) {
     let lastPh = null;
 
     for (const point of data) {
-        if (lastPh === null || Number(point.ph) !== lastPh) {
-            timeline.push(point);
-            lastPh = Number(point.ph);
+        const phNum = Number(point.ph);
+        if (lastPh === null || phNum !== lastPh) {
+            timeline.push({
+                ph: phNum,
+                tempC: Number(point.tempC),
+                createdAt: point.createdAt,
+            });
+            lastPh = phNum;
         }
     }
 
@@ -369,9 +374,6 @@ export async function getRunTimeline(runId: string) {
 }
 
 export async function deleteDevice(deviceId: string) {
-    // Only admin usually deletes devices via admin actions, 
-    // but if we allow farmers to "un-claim", it's different.
-    // Farmer delete device = remove their own DeviceUser entry.
     const userId = await getUserId();
 
     await prisma.deviceUser.delete({
@@ -382,4 +384,3 @@ export async function deleteDevice(deviceId: string) {
 
     revalidatePath('/farmer');
 }
-

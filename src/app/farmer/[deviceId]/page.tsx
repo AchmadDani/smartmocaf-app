@@ -87,6 +87,8 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ d
 
         return {
             id: run.id,
+            name: run.name || 'Fermentasi',
+            cassavaAmount: run.cassavaAmount || null,
             startedAt: run.startedAt,
             endedAt: run.endedAt,
             before: {

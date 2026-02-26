@@ -58,21 +58,13 @@ export default function AdminHeader({ user, onMenuToggle }: AdminHeaderProps) {
                 </Button>
 
                 {/* Logo */}
-                <div className="flex items-center gap-2 md:gap-3">
-                    <div className="relative w-12 h-12 md:w-14 md:h-14">
-                        <Image 
-                            src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
-                            alt="SmartMocaf" 
-                            fill
-                            className="object-contain"
-                        />
-                    </div>
-                    <div className="hidden lg:block">
-                        <p className="text-[10px] uppercase font-black tracking-[0.25em] text-gray-300 mb-0.5">Control Center</p>
-                        <h1 className="text-lg md:text-xl font-black tracking-tight text-gray-900 leading-none">
-                            Manajemen <span className="text-primary underline decoration-primary/20 decoration-4 underline-offset-4">Sistem</span>
-                        </h1>
-                    </div>
+                <div className="relative w-16 h-16 md:w-20 md:h-20">
+                    <Image 
+                        src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
+                        alt="SmartMocaf" 
+                        fill
+                        className="object-contain"
+                    />
                 </div>
             </div>
 

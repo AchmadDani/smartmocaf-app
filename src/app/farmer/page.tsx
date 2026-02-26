@@ -99,22 +99,16 @@ export default async function FarmerDashboardPage() {
     return (
         <div className="min-h-screen bg-[#FAFAFA] pb-24">
             {/* Header */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 h-14 md:h-16">
-                <div className="max-w-2xl mx-auto px-4 md:px-6 h-full">
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 h-16 md:h-20">
+                <div className="max-w-6xl mx-auto px-4 md:px-6 h-full">
                     <div className="flex items-center justify-between h-full">
-                        <div className="flex items-center gap-2 md:gap-3">
-                            <div className="relative w-12 h-12 md:w-14 md:h-14">
-                                <Image 
-                                    src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
-                                    alt="SmartMocaf" 
-                                    fill
-                                    className="object-contain"
-                                />
-                            </div>
-                            <div className="hidden sm:block">
-                                <h2 className="text-sm font-black tracking-tight text-gray-900 leading-none">SmartMocaf</h2>
-                                <p className="text-[10px] uppercase font-black tracking-widest text-primary mt-0.5">Farmer Panel</p>
-                            </div>
+                        <div className="relative w-16 h-16 md:w-20 md:h-20">
+                            <Image 
+                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
+                                alt="SmartMocaf" 
+                                fill
+                                className="object-contain"
+                            />
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -127,56 +121,56 @@ export default async function FarmerDashboardPage() {
                 </div>
             </header>
 
-            <main className="max-w-2xl mx-auto px-6 py-10">
+            <main className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10">
                 {/* Greeting */}
-                <div className="flex items-center justify-between mb-10 group">
+                <div className="flex items-center justify-between mb-8 md:mb-10 group">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-emerald-100/50 shadow-sm">
                                 System Ready
                             </span>
                         </div>
-                        <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight">
+                        <h1 className="text-3xl md:text-4xl font-black text-gray-900 tracking-tight leading-tight">
                             Halo, {firstName}
                         </h1>
                         <p className="text-gray-400 mt-2 font-bold text-sm">Monitor seluruh batch fermentasi Anda secara real-time.</p>
                     </div>
                     <div className="hidden sm:block">
-                        <div className="w-16 h-16 rounded-[2rem] bg-white flex items-center justify-center border border-gray-100 shadow-xl shadow-gray-200/50 font-black text-xl text-primary">
+                        <div className="w-14 h-14 md:w-16 md:h-16 rounded-[2rem] bg-white flex items-center justify-center border border-gray-100 shadow-xl shadow-gray-200/50 font-black text-lg md:text-xl text-primary">
                             {initial}
                         </div>
                     </div>
                 </div>
 
                 {/* Quick Stats Grid */}
-                <div className="grid grid-cols-3 gap-4 mb-12">
-                    <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                <div className="grid grid-cols-3 gap-3 md:gap-4 mb-8 md:mb-12">
+                    <div className="bg-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Total Unit</p>
-                        <h3 className="text-3xl font-black text-gray-900 leading-none">{devicesWithData.length}</h3>
+                        <h3 className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{devicesWithData.length}</h3>
                         <div className="absolute -bottom-1 -right-1 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Cpu className="h-12 w-12" />
+                            <Cpu className="h-10 w-10 md:h-12 md:w-12" />
                         </div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                    <div className="bg-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Online</p>
-                        <h3 className="text-3xl font-black text-emerald-500 leading-none">{onlineCount}</h3>
+                        <h3 className="text-2xl md:text-3xl font-black text-emerald-500 leading-none">{onlineCount}</h3>
                         <div className="absolute -bottom-1 -right-1 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Wifi className="h-12 w-12" />
+                            <Wifi className="h-10 w-10 md:h-12 md:w-12" />
                         </div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Running</p>
-                        <h3 className="text-3xl font-black text-blue-500 leading-none">{runningCount}</h3>
+                    <div className="bg-white p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-gray-100 shadow-sm relative overflow-hidden group">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Berjalan</p>
+                        <h3 className="text-2xl md:text-3xl font-black text-blue-500 leading-none">{runningCount}</h3>
                         <div className="absolute -bottom-1 -right-1 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Activity className="h-12 w-12" />
+                            <Activity className="h-10 w-10 md:h-12 md:w-12" />
                         </div>
                     </div>
                 </div>
 
-                {/* Device List Section Header */}
-                <div className="flex items-center justify-between mb-6">
+                {/* Device List Section Header — Vertical on mobile */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-gray-900 flex items-center justify-center text-white">
                             <LayoutDashboard className="h-4 w-4" />
@@ -203,7 +197,7 @@ export default async function FarmerDashboardPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                         {devicesWithData.map((device: any) => (
                             <DeviceCard
                                 key={device.id}

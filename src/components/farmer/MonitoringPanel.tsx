@@ -20,7 +20,10 @@ import {
     History,
     Activity,
     Cpu,
-    ArrowRight
+    ArrowRight,
+    Timer,
+    Calendar,
+    ShieldAlert
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,10 +48,10 @@ interface MonitoringPanelProps {
         temp_c: number; 
         water_level?: number; 
         relay?: number;
-        mode?: string; // Added
-        status?: string; // Added
-        uptime_s?: number; // Added
-        stable_time_s?: number; // Added
+        mode?: string;
+        status?: string;
+        uptime_s?: number;
+        stable_time_s?: number;
     } | null;
     status: 'idle' | 'running' | 'done';
     settings: {
@@ -58,7 +61,7 @@ interface MonitoringPanelProps {
         telegram_chat_id?: string;
     };
     role: 'OWNER' | 'VIEWER';
-    mode?: 'auto' | 'manual' | 'test' | 'TEST' | 'MANUAL'; // Updated type
+    mode?: 'auto' | 'manual' | 'test' | 'TEST' | 'MANUAL';
     isOnline?: boolean;
     readonly?: boolean;
 }
@@ -67,10 +70,14 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
     const { client, lastMessages } = useMqtt();
     const [isPending, startTransition] = useTransition();
     const [showPhDialog, setShowPhDialog] = useState(false);
+    const [showStartDialog, setShowStartDialog] = useState(false);
+    const [fermentName, setFermentName] = useState('');
+    const [cassavaAmount, setCassavaAmount] = useState('');
     
     const [liveTelemetry, setLiveTelemetry] = useState(initialTelemetry);
     const [liveMode, setLiveMode] = useState(initialMode);
     const [isDeviceOnline, setIsDeviceOnline] = useState(initialOnline);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const mqttDeviceId = deviceCode || deviceId;
 
@@ -100,53 +107,67 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
         }
     }, [lastMessages, mqttDeviceId]);
 
-    const handleStart = async () => {
-        // Show custom dialog for fermentation details
-        const { value: formValues } = await import('sweetalert2').then(Swal => {
-            return Swal.default.fire({
-                title: 'Mulai Fermentasi',
-                html: `
-                    <div class="text-left space-y-4">
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Nama Fermentasi</label>
-                            <input id="fermentation-name" type="text" class="swal2-input" placeholder="Contoh: Batch Mocaf #1" value="">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Jumlah Singkong (KG)</label>
-                            <input id="cassava-amount" type="number" class="swal2-input" placeholder="Contoh: 50" min="1">
-                        </div>
-                    </div>
-                `,
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Mulai Fermentasi',
-                cancelButtonText: 'Batal',
-                confirmButtonColor: '#009e3e',
-                preConfirm: () => {
-                    const name = (document.getElementById('fermentation-name') as HTMLInputElement).value;
-                    const amount = (document.getElementById('cassava-amount') as HTMLInputElement).value;
-                    return { name, amount: amount ? parseFloat(amount) : null };
-                }
-            });
-        });
+    // Elapsed timer for active fermentation
+    useEffect(() => {
+        const liveStatus = liveTelemetry?.status || '';
+        const isActive = status === 'running' || ['FERMENT', 'STABLE'].includes(liveStatus);
         
-        if (formValues) {
-            const mode = (liveMode === 'manual' || liveMode === 'MANUAL') ? 'manual' : 'auto';
-            startTransition(async () => {
-                showLoading('Memulai fermentasi...');
-                try {
-                    await startFermentation(deviceId, mode, formValues.name || undefined, formValues.amount || undefined);
-                    closeSwal();
-                    showSuccess('Fermentasi Dimulai', `Proses monitoring telah aktif untuk ${formValues.name || 'fermentasi baru'}.`);
-                } catch (error) {
-                    closeSwal();
-                    showError('Gagal Memulai', 'Terjadi kesalahan saat memulai fermentasi.');
-                }
-            });
+        if (isActive) {
+            const interval = setInterval(() => {
+                setElapsedSeconds(prev => prev + 1);
+            }, 1000);
+            return () => clearInterval(interval);
         }
+    }, [status, liveTelemetry?.status]);
+
+    // Reset elapsed when uptime changes from MQTT
+    useEffect(() => {
+        if (liveTelemetry?.uptime_s != null) {
+            setElapsedSeconds(liveTelemetry.uptime_s);
+        }
+    }, [liveTelemetry?.uptime_s]);
+
+    const formatElapsed = (totalSeconds: number) => {
+        const hours = Math.floor(totalSeconds / 3600);
+        const mins = Math.floor((totalSeconds % 3600) / 60);
+        const secs = totalSeconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Viewer access control
+    const showViewerAlert = () => {
+        showError('Akses Ditolak', 'Anda Bukan Pemilik Alat. Hubungi pemilik untuk mendapatkan akses kontrol.');
+    };
+
+    const handleStart = () => {
+        if (role === 'VIEWER' || readonly) { showViewerAlert(); return; }
+        setFermentName('');
+        setCassavaAmount('');
+        setShowStartDialog(true);
+    };
+
+    const handleStartSubmit = () => {
+        const mode = (liveMode === 'manual' || liveMode === 'MANUAL') ? 'manual' : 'auto';
+        const name = fermentName.trim() || undefined;
+        const amount = cassavaAmount ? parseFloat(cassavaAmount) : undefined;
+        setShowStartDialog(false);
+        startTransition(async () => {
+            showLoading('Memulai fermentasi...');
+            try {
+                await startFermentation(deviceId, mode, name, amount);
+                closeSwal();
+                showSuccess('Fermentasi Dimulai', `Proses monitoring telah aktif untuk ${name || 'fermentasi baru'}.`);
+                setElapsedSeconds(0);
+            } catch (error) {
+                closeSwal();
+                showError('Gagal Memulai', 'Terjadi kesalahan saat memulai fermentasi.');
+            }
+        });
     };
 
     const handleStop = async () => {
+        if (role === 'VIEWER' || readonly) { showViewerAlert(); return; }
+        
         const result = await showConfirm(
             'Selesaikan Fermentasi?',
             'Pastikan proses fermentasi sudah mencapai target pH yang diinginkan.',
@@ -169,6 +190,8 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
     };
 
     const handleToggleDrain = async (isOpen: boolean) => {
+        if (role === 'VIEWER' || readonly) { showViewerAlert(); return; }
+        
         const result = await showConfirm(
             isOpen ? 'Buka Keran?' : 'Tutup Keran?',
             isOpen ? 'Air dalam tangki akan dikeluarkan.' : 'Keran akan ditutup.',
@@ -191,7 +214,8 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
     };
 
     const handleModeToggle = async (newMode: 'auto' | 'manual' | 'test' | 'TEST') => {
-        // For farmer, only allow auto or manual (no test mode)
+        if (role === 'VIEWER' || readonly) { showViewerAlert(); return; }
+
         if (newMode === 'test' || newMode === 'TEST') {
             showError('Mode Tidak Tersedia', 'Mode Test hanya tersedia untuk administrator.');
             return;
@@ -214,8 +238,24 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
         }
     };
 
+    const handlePhDialogOpen = () => {
+        if (role === 'VIEWER' || readonly) { showViewerAlert(); return; }
+        setShowPhDialog(true);
+    };
+
     return (
         <div className="space-y-6 sm:space-y-8">
+            {/* Viewer Banner */}
+            {role === 'VIEWER' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+                    <ShieldAlert className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                    <div>
+                        <p className="text-sm font-black text-amber-800">Mode Hanya Lihat</p>
+                        <p className="text-xs text-amber-600 mt-0.5">Anda Bukan Pemilik Alat. Kontrol perangkat tidak tersedia.</p>
+                    </div>
+                </div>
+            )}
+
             {/* Bento Grid Sensors */}
             <div className="grid grid-cols-2 gap-3 sm:gap-5">
                 <div className="bg-gradient-to-br from-orange-50/40 to-amber-50/40 p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-orange-100/30 group hover:border-orange-200 transition-all shadow-sm">
@@ -270,8 +310,8 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 </div>
 
                 <div 
-                    className={`col-span-1 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-gray-100 group transition-all shadow-sm ${!readonly && role === 'OWNER' ? 'cursor-pointer hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5' : ''}`}
-                    onClick={() => !readonly && role === 'OWNER' && setShowPhDialog(true)}
+                    className={`col-span-1 bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] border border-gray-100 group transition-all shadow-sm ${role === 'OWNER' && !readonly ? 'cursor-pointer hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5' : ''}`}
+                    onClick={handlePhDialogOpen}
                 >
                     <div className="flex items-center justify-between mb-3 sm:mb-4">
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -280,12 +320,12 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                             </div>
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Target</span>
                         </div>
-                        {!readonly && role === 'OWNER' && <Settings2 className="h-4 w-4 text-gray-200 group-hover:text-primary transition-colors" />}
+                        {role === 'OWNER' && !readonly && <Settings2 className="h-4 w-4 text-gray-200 group-hover:text-primary transition-colors" />}
                     </div>
                     <div className="text-2xl sm:text-3xl lg:text-4xl font-black text-gray-900 tracking-tighter">
                         {settings.target_ph.toFixed(2)}
                     </div>
-                    {!readonly && role === 'OWNER' && (
+                    {role === 'OWNER' && !readonly && (
                         <p className="text-[9px] font-black text-primary uppercase tracking-[0.15em] mt-2 sm:mt-3 flex items-center gap-2">
                              Update Target <ArrowRight className="h-2.5 w-2.5" />
                         </p>
@@ -293,10 +333,10 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 </div>
             </div>
 
-            {/* Controls Card */}
+            {/* Controls Card — Kontrol Keran */}
             <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md">
                 <div className="p-4 sm:p-8 border-b border-gray-50/50 bg-gray-50/30">
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
                         <div className="flex items-center gap-2 sm:gap-3">
                             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm">
                                 <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -305,8 +345,11 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                         </div>
                         <Badge
                             variant="outline"
-                            className={`px-4 py-2 rounded-2xl border-0 shadow-lg h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 ${liveMode === 'auto' ? 'bg-primary text-white shadow-primary/20' : 'bg-amber-500 text-white shadow-amber-500/20'}`}
-                            onClick={() => !readonly && role === 'OWNER' && handleModeToggle(liveMode === 'auto' ? 'manual' : 'auto')}
+                            className={`px-4 py-2 rounded-2xl border-0 shadow-lg h-10 cursor-pointer transition-all hover:scale-105 active:scale-95 w-fit ${liveMode === 'auto' ? 'bg-primary text-white shadow-primary/20' : 'bg-amber-500 text-white shadow-amber-500/20'}`}
+                            onClick={() => {
+                                if (role === 'VIEWER' || readonly) { showViewerAlert(); return; }
+                                handleModeToggle(liveMode === 'auto' ? 'manual' : 'auto');
+                            }}
                         >
                             {liveMode === 'auto' ? <Zap className="h-3 w-3 mr-2" /> : <Settings2 className="h-3 w-3 mr-2" />}
                             <span className="text-[10px] font-black uppercase tracking-widest">{liveMode === 'auto' ? 'Mode Otomatis' : 'Mode Manual'}</span>
@@ -316,68 +359,106 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                         {liveMode === 'auto' ? 'Sistem akan membuka keran otomatis saat target pH tercapai.' : 'Peringatan: Pembuangan air kini dikontrol secara manual oleh anda.'}
                     </p>
                 </div>
-                <div className="p-8 flex items-center justify-between">
-                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                        {/* Uptime Badge */}
-                        <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full border border-gray-100/50 shadow-sm">
-                            <Activity className="w-3 h-3 text-gray-500 animate-pulse" />
-                            <span className="text-[10px] font-bold text-gray-600 tracking-wide">
-                                {liveTelemetry?.uptime_s ? `${Math.floor(liveTelemetry.uptime_s / 3600)}h ${Math.floor((liveTelemetry.uptime_s % 3600) / 60)}m` : "Offline"}
-                            </span>
-                        </div>
-                        {/* Status Badge */}
-                        <div className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full border shadow-sm ${
-                            liveTelemetry?.status === 'FERMENT' ? 'bg-blue-100 border-blue-200 text-blue-700' :
-                            liveTelemetry?.status === 'STABLE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700' :
-                            liveTelemetry?.status === 'DRAIN' ? 'bg-red-100 border-red-200 text-red-700' :
-                            liveTelemetry?.status === 'TEST' ? 'bg-purple-100 border-purple-200 text-purple-700' :
-                            liveTelemetry?.status === 'MANUAL' ? 'bg-amber-100 border-amber-200 text-amber-700' :
-                            'bg-gray-100 border-gray-200 text-gray-600'
-                        }`}>
-                            <span className="text-[10px] font-black uppercase tracking-wider">
-                                {liveTelemetry?.status === 'FERMENT' ? 'FERMENTASI' :
-                                 liveTelemetry?.status === 'STABLE' ? 'STABILISASI' :
-                                 liveTelemetry?.status === 'DRAIN' ? 'KURAS' :
-                                 liveTelemetry?.status === 'TEST' ? 'TEST MODE' :
-                                 liveTelemetry?.status === 'MANUAL' ? 'MANUAL' : 'IDLE'}
-                            </span>
-                        </div>
-                        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
-                            <Droplets className="h-5 w-5 sm:h-7 sm:w-7" />
-                        </div>
-                        <div>
-                            <span className={`text-sm sm:text-base font-black block leading-tight ${settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'text-blue-600' : 'text-gray-900'}`}>
-                                {settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'Keran Terbuka' : 'Keran Tertutup'}
-                            </span>
-                            {liveTelemetry?.relay === 1 ? (
-                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1 flex items-center gap-1">
-                                    <span className="relative flex h-2 w-2">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                                    </span>
-                                    <span className="hidden sm:inline">Sedang Menguras...</span>
+                <div className="p-4 sm:p-8">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                            {/* Uptime Badge */}
+                            <div className="flex items-center gap-1 bg-white/50 backdrop-blur-sm px-2 sm:px-3 py-1 rounded-full border border-gray-100/50 shadow-sm">
+                                <Activity className="w-3 h-3 text-gray-500 animate-pulse" />
+                                <span className="text-[10px] font-bold text-gray-600 tracking-wide">
+                                    {liveTelemetry?.uptime_s ? `${Math.floor(liveTelemetry.uptime_s / 3600)}h ${Math.floor((liveTelemetry.uptime_s % 3600) / 60)}m` : "Offline"}
                                 </span>
-                            ) : liveMode === 'manual' ? (
-                                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1 block">Kontrol Manual Aktif</span>
-                            ) : status === 'idle' ? (
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Terkunci (Otomatis)</span>
-                            ) : (
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-1 block">Otomatisasi Aktif</span>
-                            )}
+                            </div>
+                            {/* Status Badge */}
+                            <div className={`flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full border shadow-sm ${
+                                liveTelemetry?.status === 'FERMENT' ? 'bg-blue-100 border-blue-200 text-blue-700' :
+                                liveTelemetry?.status === 'STABLE' ? 'bg-yellow-100 border-yellow-200 text-yellow-700' :
+                                liveTelemetry?.status === 'DRAIN' ? 'bg-red-100 border-red-200 text-red-700' :
+                                liveTelemetry?.status === 'TEST' ? 'bg-purple-100 border-purple-200 text-purple-700' :
+                                liveTelemetry?.status === 'MANUAL' ? 'bg-amber-100 border-amber-200 text-amber-700' :
+                                'bg-gray-100 border-gray-200 text-gray-600'
+                            }`}>
+                                <span className="text-[10px] font-black uppercase tracking-wider">
+                                    {liveTelemetry?.status === 'FERMENT' ? 'FERMENTASI' :
+                                     liveTelemetry?.status === 'STABLE' ? 'STABILISASI' :
+                                     liveTelemetry?.status === 'DRAIN' ? 'KURAS' :
+                                     liveTelemetry?.status === 'TEST' ? 'TEST MODE' :
+                                     liveTelemetry?.status === 'MANUAL' ? 'MANUAL' : 'IDLE'}
+                                </span>
+                            </div>
+                            <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-2xl transition-all duration-500 ${settings.auto_drain_enabled ? 'bg-blue-600 text-white shadow-blue-500/30 ring-4 ring-blue-50' : 'bg-white text-gray-200 shadow-gray-200 border border-gray-100'}`}>
+                                <Droplets className="h-5 w-5 sm:h-7 sm:w-7" />
+                            </div>
+                            <div>
+                                <span className={`text-sm sm:text-base font-black block leading-tight ${settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'text-blue-600' : 'text-gray-900'}`}>
+                                    {settings.auto_drain_enabled || liveTelemetry?.relay === 1 ? 'Keran Terbuka' : 'Keran Tertutup'}
+                                </span>
+                                {liveTelemetry?.relay === 1 ? (
+                                    <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest mt-1 flex items-center gap-1">
+                                        <span className="relative flex h-2 w-2">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                                        </span>
+                                        <span className="hidden sm:inline">Sedang Menguras...</span>
+                                    </span>
+                                ) : liveMode === 'manual' ? (
+                                    <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest mt-1 block">Kontrol Manual Aktif</span>
+                                ) : status === 'idle' ? (
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 block">Terkunci (Otomatis)</span>
+                                ) : (
+                                    <span className="text-[10px] font-black text-primary uppercase tracking-widest mt-1 block">Otomatisasi Aktif</span>
+                                )}
+                            </div>
                         </div>
+                        {role === 'OWNER' && !readonly && (
+                            <Switch 
+                                checked={settings.auto_drain_enabled} 
+                                onCheckedChange={(val) => {
+                                    handleToggleDrain(val);
+                                }}
+                                disabled={isPending || liveMode === 'auto'}
+                                className="scale-125 data-[state=checked]:bg-blue-600"
+                            />
+                        )}
                     </div>
-                    {!readonly && role === 'OWNER' && (
-                        <Switch 
-                            checked={settings.auto_drain_enabled} 
-                            onCheckedChange={handleToggleDrain}
-                            disabled={isPending || liveMode === 'auto'}
-                            className="scale-125 data-[state=checked]:bg-blue-600"
-                        />
+
+                    {/* Manual Control Buttons (Only in Manual Mode for OWNER) */}
+                    {(liveMode === 'manual' || liveMode === 'MANUAL' || liveTelemetry?.mode === 'manual') && role === 'OWNER' && !readonly && (
+                        <div className="mt-6 pt-6 border-t border-gray-100">
+                            <h4 className="text-xs font-black text-gray-900 mb-4 flex items-center gap-2 uppercase tracking-widest">
+                                <Settings2 className="h-3.5 w-3.5 text-amber-500" />
+                                Kontrol Manual Keran
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                <Button 
+                                    onClick={() => {
+                                        if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "1" }));
+                                    }}
+                                    disabled={liveTelemetry?.relay === 1}
+                                    className={`h-12 sm:h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-lg transition-all ${
+                                        liveTelemetry?.relay === 1 ? 'bg-blue-100 text-blue-400' : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-blue-500/30'
+                                    }`}
+                                >
+                                    Buka Keran
+                                </Button>
+                                <Button 
+                                    onClick={() => {
+                                        if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "0" }));
+                                    }}
+                                    disabled={liveTelemetry?.relay === 0}
+                                    className={`h-12 sm:h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-lg transition-all ${
+                                        liveTelemetry?.relay === 0 ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30'
+                                    }`}
+                                >
+                                    Tutup Keran
+                                </Button>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Progress Timeline */}
+            {/* Progress Timeline — Tahapan Fermentasi */}
             <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-gray-100 p-4 sm:p-8 shadow-sm">
                 <h3 className="text-sm font-black text-gray-900 mb-6 sm:mb-8 flex items-center gap-2 sm:gap-3 uppercase tracking-widest">
                     <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -385,11 +466,10 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                     </div>
                     Tahapan Fermentasi
                 </h3>
-                <div className="space-y-10 relative ml-3">
+                <div className="space-y-8 sm:space-y-10 relative ml-3">
                     <div className="absolute left-4 top-2 bottom-2 w-px bg-gray-100" />
                     
                     {(() => {
-                        // Determine step states from live MQTT status
                         const liveStatus = liveTelemetry?.status || '';
                         const isRunning = status === 'running' || ['FERMENT', 'STABLE', 'DRAIN'].includes(liveStatus);
                         const isDone = status === 'done';
@@ -397,46 +477,60 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                         const isStabilizing = liveStatus === 'STABLE';
                         const isDraining = liveStatus === 'DRAIN';
                         
+                        const isIdle = !isRunning && !isDone;
+                        
                         const steps = [
                             { 
                                 label: 'Sterilisasi & Persiapan', 
-                                desc: 'Tangki siap dan menunggu input bahan baku', 
+                                desc: isIdle ? 'Menunggu proses dimulai...' : 'Tangki siap dan menunggu input bahan baku', 
                                 icon: Circle, 
                                 done: isRunning || isDone, 
-                                active: false 
+                                active: false,
+                                pending: isIdle
                             },
                             { 
                                 label: 'Inkubasi Aktif', 
                                 desc: isFermenting 
-                                    ? 'Monitoring pH... Menunggu target tercapai' 
+                                    ? `Monitoring pH... Menunggu target tercapai` 
                                     : isStabilizing 
                                         ? `Stabilisasi pH${liveTelemetry?.stable_time_s ? ` (${Math.floor(liveTelemetry.stable_time_s / 60)}m)` : ''}` 
-                                        : 'Monitoring sensor pH dan Suhu secara berkala', 
+                                        : isIdle ? 'Menunggu...' : 'Monitoring sensor pH dan Suhu secara berkala', 
                                 icon: Activity, 
                                 active: isFermenting || isStabilizing, 
-                                done: isDraining || isDone 
+                                done: isDraining || isDone,
+                                showTimer: isFermenting || isStabilizing,
+                                pending: isIdle
                             },
                             { 
-                                label: isDraining ? 'Sedang Menguras...' : 'Panen & Selesai', 
+                                label: isDraining ? 'Sedang Menguras...' : 'Fermentasi Selesai', 
                                 desc: isDraining 
                                     ? 'Keran terbuka, air sedang dibuang' 
-                                    : 'Kualitas singkong siap untuk proses hilirisasi', 
+                                    : isIdle ? 'Menunggu...' : 'Kualitas singkong siap untuk proses hilirisasi', 
                                 icon: CheckCircle2, 
                                 active: isDraining, 
-                                done: isDone 
+                                done: isDone,
+                                pending: isIdle
                             }
                         ];
                         
                         return steps.map((step, i) => (
-                            <div key={i} className="flex items-start gap-6 relative group">
-                                <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center z-10 bg-white transition-all duration-500
-                                    ${step.active ? 'border-primary shadow-[0_0_15px_rgba(34,197,94,0.3)] ring-4 ring-primary/10' : step.done ? 'border-primary bg-primary' : 'border-gray-50'}`}
+                            <div key={i} className="flex items-start gap-4 sm:gap-6 relative group">
+                                <div className={`w-8 h-8 rounded-full border-4 flex items-center justify-center z-10 bg-white transition-all duration-500 flex-shrink-0
+                                    ${step.active ? 'border-primary shadow-[0_0_15px_rgba(34,197,94,0.3)] ring-4 ring-primary/10' : step.done ? 'border-primary bg-primary' : step.pending ? 'border-dashed border-gray-200' : 'border-gray-50'}`}
                                 >
-                                    {step.done ? <CheckCircle2 className="h-4 w-4 text-white" /> : <step.icon className={`h-4 w-4 ${step.active ? 'text-primary animate-pulse' : 'text-gray-100'}`} />}
+                                    {step.done ? <CheckCircle2 className="h-4 w-4 text-white" /> : <step.icon className={`h-4 w-4 ${step.active ? 'text-primary animate-pulse' : step.pending ? 'text-gray-200' : 'text-gray-100'}`} />}
                                 </div>
-                                <div className="pt-0.5">
-                                    <p className={`text-base font-black tracking-tight ${step.active || step.done ? 'text-gray-900' : 'text-gray-300'}`}>{step.label}</p>
-                                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wide mt-1">{step.desc}</p>
+                                <div className="pt-0.5 flex-1 min-w-0">
+                                    <p className={`text-sm sm:text-base font-black tracking-tight ${step.active || step.done ? 'text-gray-900' : step.pending ? 'text-gray-300' : 'text-gray-300'}`}>{step.label}</p>
+                                    <p className={`text-[10px] sm:text-[11px] font-bold uppercase tracking-wide mt-1 ${step.pending ? 'text-gray-300 italic' : 'text-gray-400'}`}>{step.desc}</p>
+                                    {/* Elapsed timer for active Inkubasi */}
+                                    {'showTimer' in step && step.showTimer && (
+                                        <div className="mt-3 flex items-center gap-2 bg-primary/5 px-3 py-2 rounded-xl w-fit border border-primary/10">
+                                            <Timer className="h-3.5 w-3.5 text-primary animate-pulse" />
+                                            <span className="text-sm font-mono font-black text-primary tracking-wider">{formatElapsed(elapsedSeconds)}</span>
+                                            <span className="text-[9px] font-black text-primary/60 uppercase tracking-widest">berlangsung</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ));
@@ -444,70 +538,92 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                 </div>
             </div>
 
-            {/* FERMENTATION CONTROL */}
-            <div className="grid grid-cols-2 gap-4 mt-6">
-                <Button 
-                    onClick={() => {
-                        if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "3" }));
-                    }}
-                    disabled={liveTelemetry?.status !== 'IDLE'}
-                    className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
-                        liveTelemetry?.status !== 'IDLE' ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30'
-                    }`}
-                >
-                    Mulai Fermentasi
-                </Button>
-                <Button 
-                    onClick={() => {
-                        if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "4" }));
-                    }}
-                    disabled={liveTelemetry?.status === 'IDLE'}
-                    className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
-                        liveTelemetry?.status === 'IDLE' ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30'
-                    }`}
-                >
-                    Stop Proses
-                </Button>
-            </div>
-
-            {/* Manual Control (Only in Manual Mode) */}
-            {(liveMode === 'manual' || liveMode === 'MANUAL' || liveTelemetry?.mode === 'manual') && (
-                <div className="mt-6 pt-6 border-t border-gray-100">
-                    <h3 className="text-sm font-black text-gray-900 mb-4 flex items-center gap-3 uppercase tracking-widest">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                            <Settings2 className="h-4 w-4 text-amber-500" />
-                        </div>
-                        Kontrol Manual
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                        <Button 
-                            onClick={() => {
-                                if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "1" }));
-                            }}
-                            disabled={liveTelemetry?.relay === 1}
-                            className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
-                                liveTelemetry?.relay === 1 ? 'bg-blue-100 text-blue-400' : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-blue-500/30'
-                            }`}
-                        >
-                            Buka Keran
-                        </Button>
-                        <Button 
-                            onClick={() => {
-                                if (client) client.publish(`growify/${mqttDeviceId}/control`, JSON.stringify({ relay: "0" }));
-                            }}
-                            disabled={liveTelemetry?.relay === 0}
-                            className={`h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
-                                liveTelemetry?.relay === 0 ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30'
-                            }`}
-                        >
-                            Tutup Keran
-                        </Button>
-                    </div>
+            {/* Mulai / Stop Fermentasi Buttons */}
+            {role === 'OWNER' && !readonly && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <Button 
+                        onClick={handleStart}
+                        disabled={status === 'running'}
+                        className={`flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
+                            status === 'running' ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:shadow-emerald-500/30 text-white'
+                        }`}
+                    >
+                        <Play className="h-4 w-4 mr-2" />
+                        Mulai Fermentasi
+                    </Button>
+                    <Button 
+                        onClick={handleStop}
+                        disabled={status !== 'running'}
+                        className={`flex-1 h-14 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg transition-all ${
+                            status !== 'running' ? 'bg-gray-100 text-gray-400' : 'bg-gradient-to-r from-red-500 to-red-600 hover:shadow-red-500/30 text-white'
+                        }`}
+                    >
+                        <Square className="h-4 w-4 mr-2" />
+                        Selesai Fermentasi
+                    </Button>
                 </div>
             )}
 
-            {/* Bottom Primary Action */}
-            {/* Removed as per instruction */}
+            {/* Start Fermentation Dialog */}
+            <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+                <DialogContent className="w-[calc(100%-2rem)] max-w-sm rounded-[2.5rem] p-6 sm:p-8 border-none overflow-hidden">
+                    <div className="absolute top-0 left-0 w-40 h-40 bg-emerald-500/5 rounded-full -ml-20 -mt-20" />
+                    <div className="absolute bottom-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mb-16" />
+                    <DialogHeader className="relative">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-primary flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/20">
+                            <Play className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                        </div>
+                        <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight">Mulai Fermentasi</DialogTitle>
+                        <DialogDescription className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest">
+                            Masukkan detail batch baru
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 sm:py-6 space-y-4 sm:space-y-5 relative">
+                        <div className="relative group">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block pl-1">Nama Fermentasi</Label>
+                            <Input 
+                                value={fermentName}
+                                onChange={(e) => setFermentName(e.target.value)}
+                                type="text" 
+                                placeholder="Contoh: Batch Mocaf #1"
+                                className="h-12 sm:h-14 text-sm sm:text-base font-bold rounded-xl sm:rounded-2xl border-gray-100 bg-gray-50/80 focus:ring-primary focus:border-primary transition-all px-4" 
+                            />
+                        </div>
+                        <div className="relative group">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block pl-1">Jumlah Singkong</Label>
+                            <div className="relative">
+                                <Input 
+                                    value={cassavaAmount}
+                                    onChange={(e) => setCassavaAmount(e.target.value)}
+                                    type="number" 
+                                    step="1"
+                                    min="1"
+                                    placeholder="50"
+                                    className="h-14 sm:h-16 text-center text-2xl sm:text-3xl font-black rounded-xl sm:rounded-2xl border-gray-100 bg-gray-50/80 focus:ring-primary focus:border-primary transition-all pr-14" 
+                                />
+                                <div className="absolute right-4 sm:right-5 top-1/2 -translate-y-1/2 text-gray-300 font-black text-xs sm:text-sm">KG</div>
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter className="flex flex-col gap-2 sm:flex-col">
+                        <Button 
+                            onClick={handleStartSubmit}
+                            disabled={isPending}
+                            className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-xs shadow-xl shadow-primary/20 bg-gradient-to-r from-emerald-500 to-primary hover:shadow-emerald-500/30 transition-all"
+                        >
+                            <Play className="h-4 w-4 mr-2" />
+                            Mulai Fermentasi
+                        </Button>
+                        <Button 
+                            variant="ghost"
+                            onClick={() => setShowStartDialog(false)}
+                            className="w-full h-10 sm:h-12 rounded-xl font-black uppercase tracking-widest text-[10px] sm:text-xs text-gray-400 hover:text-gray-600"
+                        >
+                            Batal
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             {/* pH Settings Dialog */}
             <Dialog open={showPhDialog} onOpenChange={setShowPhDialog}>
@@ -524,14 +640,12 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                         const formData = new FormData(e.currentTarget);
                         const phVal = parseFloat(formData.get('ph') as string);
                         const heightVal = parseFloat(formData.get('height') as string);
-                        const chatIdVal = formData.get('chat_id') as string;
                         
                         startTransition(async () => {
                             try {
                                 const payload: any = {};
                                 if (!isNaN(phVal)) payload.target_ph = phVal;
                                 if (!isNaN(heightVal)) payload.max_height = heightVal;
-                                if (chatIdVal && chatIdVal.trim() !== "") payload.telegram_chat_id = chatIdVal;
 
                                 await updateDeviceSettings(deviceId, payload);
                                 if (client) {
@@ -573,16 +687,6 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                                     <div className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 font-black text-sm">CM</div>
                                 </div>
                             </div>
-                            <div className="relative group">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2 block pl-1">Telegram Chat ID</Label>
-                                <Input 
-                                    name="chat_id"
-                                    type="text" 
-                                    defaultValue={settings.telegram_chat_id || ''}
-                                    placeholder="-45345..."
-                                    className="h-16 text-center text-sm font-bold rounded-2xl border-gray-100 bg-gray-50 focus:ring-primary focus:border-primary transition-all" 
-                                />
-                            </div>
                         </div>
                         <DialogFooter className="sm:justify-start">
                             <Button type="submit" className="w-full h-14 rounded-xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/20">
@@ -595,5 +699,3 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
         </div>
     );
 }
-
-
