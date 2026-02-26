@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import TelemetryPreview from "@/components/TelemetryPreview";
 
 export default function LandingPage() {
     return (
@@ -51,84 +52,8 @@ export default function LandingPage() {
                         </p>
                     </div>
 
-                    {/* Dashboard Mockup - Same style as internal pages */}
-                    <div className="max-w-5xl mx-auto">
-                        <div className="bg-white rounded-2xl shadow-2xl shadow-gray-200/50 border border-gray-200 overflow-hidden">
-                            {/* Browser Chrome */}
-                            <div className="bg-gray-100 px-3 md:px-4 py-2 md:py-3 flex items-center gap-2 md:gap-3 border-b border-gray-200">
-                                <div className="flex gap-1.5 md:gap-2">
-                                    <div className="w-2.5 md:w-3 h-2.5 md:h-3 rounded-full bg-red-400"></div>
-                                    <div className="w-2.5 md:w-3 h-2.5 md:h-3 rounded-full bg-yellow-400"></div>
-                                    <div className="w-2.5 md:w-3 h-2.5 md:h-3 rounded-full bg-green-400"></div>
-                                </div>
-                                <div className="flex-1 bg-white rounded-lg px-3 md:px-4 py-1 md:py-1.5 text-xs md:text-sm text-gray-500 font-mono">
-                                    smartmocaf.com
-                                </div>
-                            </div>
-                            {/* Dashboard Content - Styled like internal pages */}
-                            <div className="p-4 md:p-6 bg-gray-50">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
-                                    <div>
-                                        <h3 className="font-bold text-gray-900 text-base md:text-lg">Fermentor Unit #001</h3>
-                                        <p className="text-xs md:text-sm text-gray-500">Batch: FC-2026-0129</p>
-                                    </div>
-                                    <span className="px-3 md:px-4 py-1.5 md:py-1 bg-emerald-50 text-emerald-600 text-xs md:text-sm font-semibold rounded-full border border-emerald-100 w-fit">
-                                        ● Sedang Berjalan
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                                    {/* pH Card - with animation */}
-                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
-                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">pH Level</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="ph-value">4.52</p>
-                                        </div>
-                                        <div className="mt-2 flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                                            <p className="text-[10px] md:text-xs font-semibold text-emerald-600">Target: 4.50</p>
-                                        </div>
-                                    </div>
-                                    {/* Temperature Card */}
-                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
-                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Suhu</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="temp-value">28</p>
-                                            <span className="text-sm font-bold text-gray-400">°C</span>
-                                        </div>
-                                        <div className="mt-2 flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                                            <p className="text-[10px] md:text-xs font-semibold text-gray-500">Optimal</p>
-                                        </div>
-                                    </div>
-                                    {/* Water Level Card */}
-                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
-                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Level Air</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="water-value">85</p>
-                                            <span className="text-sm font-bold text-gray-400">%</span>
-                                        </div>
-                                        <div className="mt-2">
-                                            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                                                <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full transition-all duration-1000 ease-out" id="water-bar" style={{ width: '85%' }}></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {/* Duration Card */}
-                                    <div className="bg-white p-3 md:p-4 rounded-2xl border border-gray-100 shadow-sm group hover:shadow-md transition-all">
-                                        <p className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Durasi</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <p className="text-2xl md:text-3xl font-black text-gray-900" id="duration-value">18</p>
-                                            <span className="text-sm font-bold text-gray-400">jam</span>
-                                        </div>
-                                        <div className="mt-2 flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                            <p className="text-[10px] md:text-xs font-semibold text-gray-400">dari 48 jam</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Telemetry Preview - Clean Apple-like design */}
+                    <TelemetryPreview />
                 </div>
             </section>
 

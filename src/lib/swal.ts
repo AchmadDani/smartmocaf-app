@@ -78,6 +78,37 @@ if (typeof window !== 'undefined') {
                 max-width: 400px !important;
                 font-family: inherit !important;
             }
+            /* Mobile responsive - better bottom sheet with margins */
+            @media (max-width: 640px) {
+                .swal2-popup.swal-premium {
+                    border-radius: 1.5rem 1.5rem 0 0 !important;
+                    padding: 1.25rem 1rem 0.75rem !important;
+                    max-width: calc(100% - 32px) !important;
+                    width: calc(100% - 32px) !important;
+                    max-height: 85vh !important;
+                    height: auto !important;
+                    position: fixed !important;
+                    bottom: 0 !important;
+                    left: 0 !important;
+                    right: 0 !important;
+                    top: auto !important;
+                    transform: none !important;
+                    margin: 0 auto !important;
+                    left: 50% !important;
+                    transform: translateX(-50%) !important;
+                }
+                .swal2-popup.swal-premium .swal2-actions {
+                    gap: 0.5rem !important;
+                    margin-top: 1rem !important;
+                    padding: 0.5rem !important;
+                    flex-direction: column-reverse !important;
+                }
+                .swal-btn {
+                    min-height: 44px !important;
+                    padding: 0.625rem 1rem !important;
+                    font-size: 0.8125rem !important;
+                }
+            }
             .swal2-popup.swal-premium .swal2-actions {
                 gap: 0.875rem !important;
                 margin-top: 2rem !important;

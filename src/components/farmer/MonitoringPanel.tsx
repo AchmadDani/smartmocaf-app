@@ -301,7 +301,7 @@ export default function MonitoringPanel({ deviceId, deviceCode, telemetry: initi
                             <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-400 shadow-sm">
                                 <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
                             </div>
-                            <h3 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">Kontrol Evakuasi</h3>
+                            <h3 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">Kontrol Keran</h3>
                         </div>
                         <Badge
                             variant="outline"

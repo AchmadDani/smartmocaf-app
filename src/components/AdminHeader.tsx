@@ -44,7 +44,7 @@ export default function AdminHeader({ user, onMenuToggle }: AdminHeaderProps) {
     };
 
     return (
-        <header className="bg-white/80 backdrop-blur-md px-4 sm:px-6 md:px-10 h-16 md:h-[88px] border-b border-gray-100/80 flex justify-between items-center sticky top-0 z-40 w-full shadow-[0_4px_24px_rgba(0,0,0,0.01)]">
+        <header className="bg-white/80 backdrop-blur-md px-4 sm:px-6 md:px-10 h-14 md:h-16 border-b border-gray-100/80 flex justify-between items-center sticky top-0 z-40 w-full shadow-[0_4px_24px_rgba(0,0,0,0.01)]">
             <div className="flex items-center gap-4 md:gap-6">
                 {/* Hamburger — mobile only */}
                 <Button 
@@ -59,7 +59,7 @@ export default function AdminHeader({ user, onMenuToggle }: AdminHeaderProps) {
 
                 {/* Logo */}
                 <div className="flex items-center gap-2 md:gap-3">
-                    <div className="relative w-8 h-8 md:w-10 md:h-10">
+                    <div className="relative w-12 h-12 md:w-14 md:h-14">
                         <Image 
                             src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
                             alt="SmartMocaf" 

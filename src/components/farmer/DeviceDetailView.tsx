@@ -43,7 +43,7 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
         <div className={`min-h-screen bg-[#FAFAFA] font-sans pb-12 ${readonly ? 'w-full' : ''}`}>
             <div className={`w-full mx-auto min-h-screen flex flex-col`}>
                 {/* Header */}
-                <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 h-16 sm:h-[80px] flex items-center justify-between sticky top-0 z-50">
+                <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between sticky top-0 z-50">
                     <div className="flex items-center gap-3 sm:gap-4">
                         <Button
                             variant="ghost"
@@ -54,7 +54,7 @@ export default function DeviceDetailView({ device, settings, telemetry, status, 
                             <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-primary transition-colors" />
                         </Button>
                         <div className="flex items-center gap-2 sm:gap-2.5">
-                            <div className="relative w-8 h-8 sm:w-9 sm:h-9">
+                            <div className="relative w-10 h-10 sm:w-12 sm:h-12">
                                 <Image 
                                     src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
                                     alt="SmartMocaf" 

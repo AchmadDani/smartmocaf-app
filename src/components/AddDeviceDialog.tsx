@@ -44,7 +44,7 @@ export default function AddDeviceDialog({ variant = 'button' }: AddDeviceDialogP
             {variant === 'button' ? (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="bg-[#009e3e] text-white px-4 py-2.5 rounded-xl text-sm font-medium hover:bg-[#007d31] transition-colors flex items-center gap-2 shadow-lg shadow-[#009e3e]/20"
+                    className="bg-primary text-white px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl text-sm font-medium hover:bg-[#007d31] transition-colors flex items-center gap-2 shadow-lg shadow-primary/20 w-full sm:w-auto justify-center"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="12" y1="5" x2="12" y2="19"/>
@@ -62,14 +62,14 @@ export default function AddDeviceDialog({ variant = 'button' }: AddDeviceDialogP
             )}
 
             {isOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in-up">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-6 relative shadow-2xl">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in-up">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-4 sm:p-6 relative shadow-2xl max-h-[90vh] overflow-y-auto">
                         {/* Close Button */}
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+                            className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 transition-colors p-1"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <line x1="18" y1="6" x2="6" y2="18"/>
                                 <line x1="6" y1="6" x2="18" y2="18"/>
                             </svg>

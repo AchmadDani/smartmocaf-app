@@ -7,6 +7,7 @@ import { getSession } from '@/lib/auth';
 import DeviceCard from '@/components/DeviceCard';
 import AddDeviceDialog from '@/components/AddDeviceDialog';
 import LogoutButton from '@/components/LogoutButton';
+import AutoRefresh from '@/components/AutoRefresh';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,11 +99,11 @@ export default async function FarmerDashboardPage() {
     return (
         <div className="min-h-screen bg-[#FAFAFA] pb-24">
             {/* Header */}
-            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
-                <div className="max-w-2xl mx-auto px-6">
-                    <div className="flex items-center justify-between h-[80px]">
-                        <div className="flex items-center gap-3">
-                            <div className="relative w-10 h-10">
+            <header className="bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 h-14 md:h-16">
+                <div className="max-w-2xl mx-auto px-4 md:px-6 h-full">
+                    <div className="flex items-center justify-between h-full">
+                        <div className="flex items-center gap-2 md:gap-3">
+                            <div className="relative w-12 h-12 md:w-14 md:h-14">
                                 <Image 
                                     src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
                                     alt="SmartMocaf" 
@@ -117,8 +118,8 @@ export default async function FarmerDashboardPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-2xl text-gray-400 hover:text-primary hover:bg-primary/5 transition-all">
-                                <Bell className="h-5 w-5" />
+                             <Button variant="ghost" size="icon" className="h-9 w-9 md:h-10 md:w-10 rounded-xl md:rounded-2xl text-gray-400 hover:text-primary hover:bg-primary/5 transition-all">
+                                <Bell className="h-4 w-4 md:h-5 md:w-5" />
                             </Button>
                             <LogoutButton />
                         </div>
@@ -136,7 +137,7 @@ export default async function FarmerDashboardPage() {
                             </span>
                         </div>
                         <h1 className="text-4xl font-black text-gray-900 tracking-tight leading-tight">
-                            Halo, {firstName} <span className="inline-block hover:rotate-12 transition-transform cursor-default">👋</span>
+                            Halo, {firstName}
                         </h1>
                         <p className="text-gray-400 mt-2 font-bold text-sm">Monitor seluruh batch fermentasi Anda secara real-time.</p>
                     </div>
@@ -221,6 +222,7 @@ export default async function FarmerDashboardPage() {
                     </div>
                 )}
             </main>
+            <AutoRefresh />
         </div>
     );
 }

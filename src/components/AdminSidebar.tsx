@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import LogoutButton from '@/components/LogoutButton';
 import { 
@@ -59,13 +60,18 @@ export default function AdminSidebar({ isOpen, isCollapsed, onClose, onToggleCol
                 w-72 shadow-[0_0_40px_rgba(0,0,0,0.02)]
             `}>
                 {/* Logo Section */}
-                <div className={`p-6 h-[88px] flex items-center border-b border-gray-50/50 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-                    <Link href="/admin" className="flex items-center gap-3 group overflow-hidden" onClick={onClose}>
-                        <div className="flex-shrink-0 w-10 h-10 bg-primary rounded-[0.9rem] flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform duration-300">
-                            S
+                <div className={`p-4 md:p-6 h-14 md:h-[88px] flex items-center border-b border-gray-50/50 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+                    <Link href="/admin" className="flex items-center gap-2 md:gap-3 group overflow-hidden" onClick={onClose}>
+                        <div className="relative w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
+                            <Image 
+                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
+                                alt="SmartMocaf" 
+                                fill
+                                className="object-contain"
+                            />
                         </div>
                         {!isCollapsed && (
-                            <div className="flex flex-col">
+                            <div className="flex flex-col hidden md:block">
                                 <span className="font-black text-lg tracking-tight text-gray-900 leading-none">
                                     Smart<span className="text-primary">Mocaf</span>
                                 </span>
