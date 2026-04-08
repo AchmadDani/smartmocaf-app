@@ -10,7 +10,7 @@ export default function LandingPage() {
                 <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 md:gap-3">
                         <Image
-                            src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
+                            src="/assets/images/logos/Growify_smartmocaf.png"
                             alt="Growify x SmartMocaf"
                             width={140}
                             height={36}
@@ -481,7 +481,7 @@ export default function LandingPage() {
                     <div className="grid md:grid-cols-4 gap-12 mb-12">
                         <div className="md:col-span-2">
                             <Image
-                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
+                                src="/assets/images/logos/Growify_smartmocaf.png"
                                 alt="Growify x SmartMocaf"
                                 width={180}
                                 height={48}
