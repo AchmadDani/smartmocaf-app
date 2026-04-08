@@ -9,7 +9,7 @@ export default function AuthHeader() {
             <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                 <Link href="/" className="flex items-center gap-3">
                     <Image
-                        src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png"
+                        src="/assets/images/logos/Growify_smartmocaf.png"
                         alt="Growify x SmartMocaf"
                         width={180}
                         height={48}

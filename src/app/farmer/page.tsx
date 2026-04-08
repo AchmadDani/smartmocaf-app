@@ -104,7 +104,7 @@ export default async function FarmerDashboardPage() {
                     <div className="flex items-center justify-between h-full">
                         <div className="relative w-16 h-16 md:w-20 md:h-20">
                             <Image 
-                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
+                                src="/assets/images/logos/Growify_smartmocaf.png" 
                                 alt="SmartMocaf" 
                                 fill
                                 className="object-contain"

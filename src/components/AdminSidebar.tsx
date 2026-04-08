@@ -64,7 +64,7 @@ export default function AdminSidebar({ isOpen, isCollapsed, onClose, onToggleCol
                     <Link href="/admin" className="flex items-center gap-2 md:gap-3 group overflow-hidden" onClick={onClose}>
                         <div className="relative w-10 h-10 md:w-12 md:h-12 flex-shrink-0">
                             <Image 
-                                src="/assets/images/logos/Logo Growify Tech + Smart Mocaf.png" 
+                                src="/assets/images/logos/Growify_smartmocaf.png" 
                                 alt="SmartMocaf" 
                                 fill
                                 className="object-contain"
