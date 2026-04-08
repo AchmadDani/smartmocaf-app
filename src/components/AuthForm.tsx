@@ -58,10 +58,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
                 }
 
                 closeSwal();
-                await showSuccess('Selamat Datang!', 'Berhasil masuk ke sistem SmartMocaf.');
+                // Show success but don't wait for the full timer (3s) before redirecting
+                showSuccess('Selamat Datang!', 'Sedang mengalihkan...');
                 
                 if (result.redirectUrl) {
-                    router.push(result.redirectUrl);
+                    setTimeout(() => {
+                        window.location.href = result.redirectUrl;
+                    }, 800);
                 }
             } else {
                 // Register: panggil API route

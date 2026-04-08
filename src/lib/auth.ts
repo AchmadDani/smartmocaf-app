@@ -15,9 +15,15 @@ export async function comparePassword(password: string, hash: string) {
 export async function createSession(userId: string, role: string) {
   const token = jwt.sign({ userId, role }, JWT_SECRET, { expiresIn: '7d' });
   const cookieStore = await cookies();
+  
+  // If production but no SSL (HTTP), we must use secure: false
+  // otherwise browser will reject the cookie
+  const isProd = process.env.NODE_ENV === 'production';
+  const allowInsecure = process.env.ALLOW_INSECURE_HTTP === 'true';
+
   cookieStore.set('session', token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd && !allowInsecure,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 days
     path: '/',
